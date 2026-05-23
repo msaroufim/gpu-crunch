@@ -853,7 +853,8 @@ button:disabled {
 .opponent-zone,
 .market-zone,
 .tableau-zone,
-.action-dock {
+.action-dock,
+.victory-screen {
   min-width: 0;
   max-width: 100%;
   border: 1px solid #d6dde3;
@@ -861,6 +862,83 @@ button:disabled {
   padding: 12px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 12px 32px rgba(20, 37, 55, 0.06);
+}
+
+.victory-screen {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.85fr) minmax(260px, 1.15fr) auto;
+  align-items: center;
+  gap: 14px;
+  border-color: #a8c1d4;
+  background:
+    linear-gradient(135deg, rgba(231, 244, 211, 0.9), rgba(224, 244, 251, 0.9)),
+    #ffffff;
+}
+
+.victory-head {
+  display: grid;
+  gap: 4px;
+}
+
+.victory-head span {
+  color: #45606d;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.victory-head h2 {
+  margin: 0;
+  color: #102033;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.victory-head p {
+  margin: 0;
+  color: #52616f;
+  font-size: 13px;
+}
+
+.victory-table {
+  display: grid;
+  gap: 6px;
+}
+
+.victory-row {
+  display: grid;
+  grid-template-columns: 24px minmax(120px, 1fr) auto minmax(100px, auto);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(134, 160, 181, 0.55);
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.victory-row span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #174c7d;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.victory-row strong,
+.victory-row b {
+  color: #102033;
+}
+
+.victory-row em {
+  justify-self: end;
+  color: #51606c;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
 }
 
 .tableau-zone {
@@ -1046,6 +1124,12 @@ button:disabled {
   gap: 6px;
 }
 
+.score-line small {
+  color: #667584;
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .toast {
   position: fixed;
   right: 18px;
@@ -1076,6 +1160,16 @@ button:disabled {
   .event-band,
   .right-rail {
     grid-template-columns: 1fr;
+  }
+
+  .victory-screen,
+  .victory-row {
+    grid-template-columns: 1fr;
+  }
+
+  .victory-row span,
+  .victory-row em {
+    justify-self: start;
   }
 
   .brand-panel {

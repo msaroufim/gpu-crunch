@@ -37,6 +37,7 @@ type Player = {
 }
 
 type Game = {
+  id: string
   status: 'lobby' | 'playing' | 'finished'
   round: number
   maxRounds: number
@@ -67,6 +68,7 @@ const rooms = new Map<string, Room>()
 const cardsById = new Map(CARDS.map((card) => [card.id, card]))
 const eventsById = new Map(EVENTS.map((event) => [event.id, event]))
 const DEFAULT_ROOM_ID = 'POC'
+let gameSequence = 0
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const distPath = path.join(__dirname, 'dist')
@@ -129,6 +131,7 @@ function freshPlayer(id: string, name: string, isBot = false, focus?: Resource[]
 
 function newGame(): Game {
   return {
+    id: `lobby-${Date.now()}-${gameSequence}`,
     status: 'lobby',
     round: 0,
     maxRounds: 8,
@@ -295,6 +298,7 @@ function startGame(room: Room) {
     player.score = 0
   })
   room.game = {
+    id: `${room.id}-${Date.now()}-${gameSequence += 1}`,
     status: 'playing',
     round: 0,
     maxRounds: 8,

@@ -49,6 +49,7 @@ type Player = {
 }
 
 type Game = {
+  id: string
   status: 'lobby' | 'playing' | 'finished'
   round: number
   maxRounds: number
@@ -71,6 +72,14 @@ type Room = {
   events: EventCard[]
 }
 
+type VictoryRecord = {
+  wins: number
+  bestScore: number
+  games: number
+}
+
+type VictoryRecords = Record<string, VictoryRecord>
+
 const socketUrl =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? `${window.location.protocol}//${window.location.hostname}:3001` : window.location.origin)
@@ -80,6 +89,52 @@ const resourceIcons: Record<Resource, typeof Banknote> = {
   influence: Handshake,
   compute: Cpu,
   energy: Zap,
+}
+
+const victoryRecordKey = 'gpu-crunch-victory-records'
+const recordedGamesKey = 'gpu-crunch-recorded-games'
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) as T : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeJson<T>(key: string, value: T) {
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+function useVictoryRecords(room: Room) {
+  const [records, setRecords] = useState<VictoryRecords>(() => readJson<VictoryRecords>(victoryRecordKey, {}))
+
+  useEffect(() => {
+    if (room.game.status !== 'finished') return
+
+    const recorded = readJson<string[]>(recordedGamesKey, [])
+    if (recorded.includes(room.game.id)) return
+
+    const bestScore = Math.max(...room.players.map((player) => player.score))
+    const winners = new Set(room.players.filter((player) => player.score === bestScore).map((player) => player.name))
+    const next = { ...records }
+
+    for (const player of room.players) {
+      const current = next[player.name] ?? { wins: 0, bestScore: 0, games: 0 }
+      next[player.name] = {
+        wins: current.wins + (winners.has(player.name) ? 1 : 0),
+        bestScore: Math.max(current.bestScore, player.score),
+        games: current.games + 1,
+      }
+    }
+
+    writeJson(victoryRecordKey, next)
+    writeJson(recordedGamesKey, [...recorded, room.game.id].slice(-50))
+    window.setTimeout(() => setRecords(next), 0)
+  }, [records, room.game.id, room.game.status, room.players])
+
+  return records
 }
 
 const artGlyphs: Record<Card['art'], string> = {
@@ -246,7 +301,19 @@ function seatTone(index: number) {
   return ['seat-green', 'seat-red', 'seat-blue', 'seat-neutral'][index] ?? 'seat-neutral'
 }
 
-function PlayerPanel({ player, active, you, seat }: { player: Player; active: boolean; you: boolean; seat: string }) {
+function PlayerPanel({
+  player,
+  active,
+  you,
+  seat,
+  record,
+}: {
+  player: Player
+  active: boolean
+  you: boolean
+  seat: string
+  record?: VictoryRecord
+}) {
   return (
     <section className={`player-panel ${seat} ${active ? 'active' : ''} ${you ? 'you' : ''}`}>
       <div className="player-heading">
@@ -259,6 +326,7 @@ function PlayerPanel({ player, active, you, seat }: { player: Player; active: bo
       <div className="turn-stats">
         <span>{actionStatus(player, active)}</span>
         <span>{player.actionsTaken} turns</span>
+        <span>{record?.wins ?? 0} wins</span>
       </div>
       {player.initiative && <div className="priority-badge">Holds Priority Card</div>}
       {player.focus?.length ? <p className="focus-label">{focusText(player)}</p> : null}
@@ -309,7 +377,7 @@ function ShockQueue({ current, upcoming }: { current?: EventCard; upcoming: Even
   )
 }
 
-function Scoreboard({ room }: { room: Room }) {
+function Scoreboard({ room, records }: { room: Room; records: VictoryRecords }) {
   const sorted = [...room.players].sort((a, b) => b.score - a.score)
 
   return (
@@ -321,9 +389,52 @@ function Scoreboard({ room }: { room: Room }) {
             {index === 0 && <Trophy size={16} />}
             {player.name}
           </span>
-          <strong>{player.score}</strong>
+          <strong>{player.score} VP</strong>
+          <small>{records[player.name]?.wins ?? 0} wins</small>
         </div>
       ))}
+    </section>
+  )
+}
+
+function VictoryScreen({
+  room,
+  records,
+  onNewGame,
+}: {
+  room: Room
+  records: VictoryRecords
+  onNewGame: () => void
+}) {
+  const sorted = [...room.players].sort((a, b) => b.score - a.score)
+  const topScore = sorted[0]?.score ?? 0
+  const winners = sorted.filter((player) => player.score === topScore)
+  const headline = winners.length === 1 ? `${winners[0].name} wins` : `${winners.map((player) => player.name).join(' + ')} tie`
+
+  return (
+    <section className="victory-screen">
+      <div className="victory-head">
+        <span>Game complete</span>
+        <h2>{headline}</h2>
+        <p>Final score is printed VP on built cards.</p>
+      </div>
+      <div className="victory-table">
+        {sorted.map((player, index) => {
+          const record = records[player.name]
+          return (
+            <div className="victory-row" key={player.id}>
+              <span>{index + 1}</span>
+              <strong>{player.name}</strong>
+              <b>{player.score} VP</b>
+              <em>{record?.wins ?? 0} wins · best {record?.bestScore ?? player.score}</em>
+            </div>
+          )
+        })}
+      </div>
+      <button type="button" onClick={onNewGame}>
+        <Trophy size={16} />
+        New Game
+      </button>
     </section>
   )
 }
@@ -489,6 +600,7 @@ function Glossary({ cards, onClose }: { cards: Card[]; onClose: () => void }) {
 
 function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
   const [glossaryOpen, setGlossaryOpen] = useState(false)
+  const records = useVictoryRecords(room)
   const cards = useMemo(() => new Map(room.cards.map((card) => [card.id, card])), [room.cards])
   const events = useMemo(() => new Map(room.events.map((event) => [event.id, event])), [room.events])
   const event = room.game.event ? events.get(room.game.event) : undefined
@@ -536,12 +648,20 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
               active={index === room.game.activePlayer && room.game.status === 'playing'}
               you={player.id === socket?.id}
               seat={seatTone(index)}
+              record={records[player.name]}
             />
           ))}
-          {room.game.status === 'finished' && <Scoreboard room={room} />}
+          {room.game.status === 'finished' && <Scoreboard room={room} records={records} />}
         </aside>
 
         <section className="play-area">
+          {room.game.status === 'finished' && (
+            <VictoryScreen
+              room={room}
+              records={records}
+              onNewGame={() => socket?.emit('startGame', { roomId: room.id })}
+            />
+          )}
           <MarketRow
             market={room.game.market ?? []}
             cards={cards}

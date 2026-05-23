@@ -278,7 +278,9 @@ function phaseBudget(player: Player, event?: EventCard): ResourceMap {
 function startRound(room: Room) {
   const game = room.game
   game.round += 1
-  game.event = game.eventDeck.shift() ?? shuffle(EVENTS.map((event) => event.id))[0]
+  game.event = game.round === 1
+    ? null
+    : game.eventDeck.shift() ?? shuffle(EVENTS.map((event) => event.id))[0]
   const event = currentEvent(room)
   room.players.forEach((player) => {
     player.passed = false
@@ -293,7 +295,7 @@ function startRound(room: Room) {
     player.initiative = false
   })
   game.priorityPlayerId = null
-  log(room, `Phase ${game.round}: ${event?.name ?? 'Open Market'} is active.`)
+  log(room, `Phase ${game.round}: ${event?.name ?? 'Opening Draft'} is active.`)
 }
 
 function startGame(room: Room) {
@@ -317,7 +319,7 @@ function startGame(room: Room) {
     deck: weightedDeck(),
     market: [],
     discard: [],
-    eventDeck: makeEventDeck(GAME_PHASES),
+    eventDeck: makeEventDeck(GAME_PHASES - 1),
     event: null,
     priorityPlayerId: null,
     log: [],

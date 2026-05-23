@@ -408,7 +408,7 @@ function scorePlayers(players: Player[]) {
 
 function startNextRound(game: Game, players: Player[]) {
   game.round += 1
-  game.event = events.get(game.events.shift()!)
+  game.event = game.round === 1 ? undefined : events.get(game.events.shift()!)
   players.forEach((player) => {
     player.passed = false
     resetBudget(game, player)
@@ -500,7 +500,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
     deck: weightedDeck(random),
     market: [],
     discard: [],
-    events: makeEventDeck(random, GAME_PHASES),
+    events: makeEventDeck(random, GAME_PHASES - 1),
     active: 0,
     round: 0,
     log: [],
@@ -514,7 +514,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
 
   while (game.round < GAME_PHASES) {
     startNextRound(game, players)
-    game.log.push(`\nRound ${game.round}: ${game.event?.name} -- ${game.event?.rule}`)
+    game.log.push(`\nRound ${game.round}: ${game.event?.name ?? 'Opening Draft'} -- ${game.event?.rule ?? 'No crisis this phase.'}`)
 
     let guard = 0
     while (!players.every((player) => player.passed) && guard < 20) {
@@ -721,7 +721,7 @@ function summarizeEventImpact(games: number) {
       deck: weightedDeck(random),
       market: [],
       discard: [],
-      events: makeEventDeck(random, GAME_PHASES),
+      events: makeEventDeck(random, GAME_PHASES - 1),
       active: 0,
       round: 0,
       log: [],

@@ -363,8 +363,8 @@ function ShockQueue({ current, upcoming }: { current?: EventCard; upcoming: Even
     <section className="shock-queue">
       <div className="shock-card current">
         <span>Now</span>
-        <strong>{current?.name ?? 'Open Market'}</strong>
-        <p>{current?.rule ?? 'No modifier this phase.'}</p>
+        <strong>{current?.name ?? 'Opening Draft'}</strong>
+        <p>{current?.rule ?? 'No crisis this phase. Take one starter or Scout.'}</p>
       </div>
       {upcoming.map((event, index) => (
         <div className="shock-card" key={`${event.id}-${index}`}>
@@ -734,10 +734,10 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
           <section className="rules-box">
             <h2>Scoring</h2>
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
-            <p>You start at 0 resources. START cards are free, but building one still uses your one action for the shock.</p>
+            <p>You start at 0 resources. Phase 1 has no crisis so each player can take one START card or Scout.</p>
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 makes their printed cost harsher.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
-            <p>Each shock is one phase. Each player gets one action per shock: build one card or Scout.</p>
+            <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>
             <p>Scout skips your build and fills every empty market slot from the deck. The first Priority claim each phase acts first next phase.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>

@@ -34,7 +34,8 @@ The game lasts 12 phases.
 
 At the start of each phase:
 
-- Reveal one event shock.
+- Phase 1 is the `Opening Draft` with no event shock.
+- From phase 2 onward, reveal one event shock.
 - Reset each player's temporary budget.
 - Budget starts at 0, then adds income icons from visible tableau cards, modified by the event.
 - Unspent resources from prior phases are gone.
@@ -50,7 +51,7 @@ Players start with no tableau and 0 resources. The opening market is seeded with
 
 After the starter market, new cards enter only when Scout fills empty supply slots from the normal deck order.
 
-Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals a 12-phase crisis queue by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
+Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals an 11-phase crisis queue after the opening draft by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
 Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`.
 Events can change costs, block suits, or reduce budgets, but they do not create starting resources. Resource access comes from built cards.

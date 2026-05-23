@@ -4,6 +4,8 @@ import {
   GAME_PHASES,
   MARKET_SIZE,
   RESOURCES,
+  SCOUT_REFILL_SIZE,
+  STARTER_MARKET_SIZE,
   OPENING_MARKET_CARD_IDS,
   continuesAfterBuild,
   effectRules,
@@ -151,6 +153,7 @@ function cost(card: Card, event?: EventCard): ResourceMap {
 }
 
 function canPay(player: Player, card: Card, event?: EventCard) {
+  if (player.tableau.includes(card.id)) return false
   const cardCost = cost(card, event)
   return RESOURCES.every((resource) => player.budget[resource] >= cardCost[resource])
 }
@@ -184,15 +187,14 @@ function seedOpeningMarket(game: Game) {
     if (index >= 0) game.deck.splice(index, 1)
   }
   game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
-    const openingCard = OPENING_MARKET_CARD_IDS[index]
-    if (openingCard) return openingCard
+    if (index < STARTER_MARKET_SIZE) return OPENING_MARKET_CARD_IDS[index] ?? null
     return game.deck.shift() ?? null
   })
 }
 
 function fillEmptyMarketSlots(game: Game) {
   let filled = 0
-  for (let index = 0; index < game.market.length; index += 1) {
+  for (let index = STARTER_MARKET_SIZE; index < game.market.length && filled < SCOUT_REFILL_SIZE; index += 1) {
     if (game.market[index] !== null) continue
     const nextCard = game.deck.shift()
     if (!nextCard) break
@@ -328,11 +330,12 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
 
 function build(game: Game, players: Player[], player: Player, cardId: string, writeLog = true) {
   const card = cards.get(cardId)!
+  if (player.tableau.includes(cardId)) return
   const cardCost = cost(card, game.event)
   for (const resource of RESOURCES) player.budget[resource] -= cardCost[resource]
   addBudget(player.incomeBuilt, productiveIncome(card))
   const marketIndex = game.market.indexOf(cardId)
-  if (marketIndex >= 0) game.market[marketIndex] = null
+  if (marketIndex >= STARTER_MARKET_SIZE) game.market[marketIndex] = null
   player.tableau.push(cardId)
   player.buildsByEra[card.era] += 1
   player.passed = !continuesAfterBuild(card)

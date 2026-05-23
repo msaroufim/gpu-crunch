@@ -9,6 +9,8 @@ import {
   GAME_PHASES,
   MARKET_SIZE,
   RESOURCES,
+  SCOUT_REFILL_SIZE,
+  STARTER_MARKET_SIZE,
   OPENING_MARKET_CARD_IDS,
   type Card,
   type EventCard,
@@ -253,15 +255,14 @@ function seedOpeningMarket(room: Room) {
     if (index >= 0) room.game.deck.splice(index, 1)
   }
   room.game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
-    const openingCard = OPENING_MARKET_CARD_IDS[index]
-    if (openingCard) return openingCard
+    if (index < STARTER_MARKET_SIZE) return OPENING_MARKET_CARD_IDS[index] ?? null
     return room.game.deck.shift() ?? null
   })
 }
 
 function fillEmptyMarketSlots(room: Room) {
   let filled = 0
-  for (let index = 0; index < room.game.market.length; index += 1) {
+  for (let index = STARTER_MARKET_SIZE; index < room.game.market.length && filled < SCOUT_REFILL_SIZE; index += 1) {
     if (room.game.market[index] !== null) continue
     const nextCard = room.game.deck.shift()
     if (!nextCard) break
@@ -381,6 +382,7 @@ function buildCard(room: Room, player: Player, cardId: string) {
   const card = cardsById.get(cardId)
   if (!card) return 'Unknown card.'
   if (room.game.market.includes(cardId) === false) return 'That card is not in the market.'
+  if (player.tableau.includes(cardId)) return 'You already built that card.'
 
   const cost = cardCost(room, card)
   if (!canPay(player, cost)) return 'Not enough resources.'
@@ -392,7 +394,7 @@ function buildCard(room: Room, player: Player, cardId: string) {
   player.cardsBuilt += 1
   player.tableau.push(cardId)
   const marketIndex = room.game.market.indexOf(cardId)
-  if (marketIndex >= 0) room.game.market[marketIndex] = null
+  if (marketIndex >= STARTER_MARKET_SIZE) room.game.market[marketIndex] = null
   applyEffect(room, player, card)
   player.passed = !continuesAfterBuild(card)
   log(room, `${player.name} built ${card.name}.`)
@@ -443,6 +445,7 @@ function botAct(room: Room) {
   const affordable = room.game.market
     .map((id) => id ? cardsById.get(id) : undefined)
     .filter((card): card is Card => Boolean(card))
+    .filter((card) => !player.tableau.includes(card.id))
     .filter((card) => canPay(player, cardCost(room, card)))
     .sort((a, b) => botCardValue(room, player, b) - botCardValue(room, player, a))
 

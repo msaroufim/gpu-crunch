@@ -179,6 +179,7 @@ function adjustedCost(card: Card, event?: EventCard): ResourceMap {
 
 function canBuild(player: Player | undefined, card: Card, event?: EventCard) {
   if (!player) return false
+  if (player.tableau.includes(card.id)) return false
   const cost = adjustedCost(card, event)
   return RESOURCES.every((resource) => player.resources[resource] >= cost[resource])
 }
@@ -503,10 +504,11 @@ function MarketRow({
       <div className="market-cards">
         {market.map((cardId, index) => {
           if (!cardId) {
+            const starterSlot = index < 4
             return (
-              <div className="market-empty-slot" key={`empty-${index}`}>
-                <span>Empty slot</span>
-                <p>Scout fills all open supply slots.</p>
+              <div className={`market-empty-slot ${starterSlot ? 'starter-empty-slot' : ''}`} key={`empty-${index}`}>
+                <span>{starterSlot ? 'Starter empty' : 'Empty slot'}</span>
+                <p>{starterSlot ? 'Starter supply is gone.' : 'Scout refills main supply.'}</p>
               </div>
             )
           }
@@ -739,7 +741,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>
             <p>Scout only when you hate every build or need Priority. Most turns should build a card.</p>
-            <p>Scout skips your build and fills every empty market slot from the deck. The first Priority claim each phase acts first next phase.</p>
+            <p>Scout skips your build and refills only the 8 main supply slots. The first Priority claim each phase acts first next phase.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>

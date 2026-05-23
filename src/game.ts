@@ -55,6 +55,8 @@ export type EventCard = {
 export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
 export const TRACKS: Track[] = ['capacity', 'policy', 'grid', 'moat']
 export const MARKET_SIZE = 12
+export const STARTER_MARKET_SIZE = 4
+export const SCOUT_REFILL_SIZE = MARKET_SIZE - STARTER_MARKET_SIZE
 export const GAME_PHASES = 12
 
 export const resourceLabels: Record<Resource, string> = {
@@ -240,7 +242,6 @@ export const OPENING_MARKET_CARD_IDS = [
   'firmware-miracle',
   'earthquake-insurance',
   'water-permit',
-  'hopper-fire-sale',
 ]
 
 export const EVENTS: EventCard[] = [

@@ -36,9 +36,12 @@ At the start of each phase:
 
 - Reveal one event shock.
 - Reset each player's temporary budget.
-- Budget equals base resources plus income icons from built cards, modified by the event.
+- Budget equals income icons from visible tableau cards, modified by the event.
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
+
+Each player starts with the same four visible Starter cards in tableau: `Seed Capital`, `Policy Contact`, `Cloud Credit`, and `Power Reservation`. They are not part of the 52-card deck.
+The opening market is seeded with five affordable early cards from the main deck; after that, market refills come from the normal non-starter deck order.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 

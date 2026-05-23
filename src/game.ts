@@ -39,6 +39,7 @@ export type ArtKey =
   | 'risk'
   | 'toast'
   | 'cooling'
+  | 'starter'
 
 export type EventCard = {
   id: string
@@ -224,6 +225,16 @@ export const CARDS: Card[] = [
   c('sanctions-shock', 'China War Games Around Taiwan', 'Risk', 3, 'late', 'Joint Sword drills make every sourcing plan feel one headline away from failure.', { influence: 3, money: 2 }, { influence: 2, compute: 1 }, undefined, { policy: 4 }, 4, 'risk', 'shock'),
   c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { money: 3, compute: 1, energy: 1 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'priority'),
 ]
+
+export const STARTER_CARDS: Card[] = [
+  c('starter-seed-capital', 'Seed Capital', 'Starter', 1, 'early', 'Enough cash to place the first real order.', {}, undefined, { money: 3 }, {}, 0, 'starter'),
+  c('starter-policy-contact', 'Policy Contact', 'Starter', 1, 'early', 'One phone number that still gets picked up.', {}, undefined, { influence: 1 }, {}, 0, 'starter'),
+  c('starter-cloud-credit', 'Cloud Credit', 'Starter', 1, 'early', 'A small allocation before the procurement process wakes up.', {}, undefined, { compute: 1 }, {}, 0, 'starter'),
+  c('starter-power-reservation', 'Power Reservation', 'Starter', 1, 'early', 'A modest grid commitment for the first rack.', {}, undefined, { energy: 1 }, {}, 0, 'starter'),
+]
+
+export const STARTER_CARD_IDS = STARTER_CARDS.map((card) => card.id)
+export const ALL_CARDS = [...STARTER_CARDS, ...CARDS]
 
 export const EVENTS: EventCard[] = [
   { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -1. Gain +1 Influence.', costMod: { money: -1 }, incomeMod: { influence: 1 } },

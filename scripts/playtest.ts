@@ -1,7 +1,9 @@
 import {
   CARDS,
   EVENTS,
+  ALL_CARDS,
   RESOURCES,
+  STARTER_CARD_IDS,
   continuesAfterBuild,
   effectRules,
   effectiveCost,
@@ -56,7 +58,7 @@ type Game = {
   chains: number
 }
 
-const cards = new Map(CARDS.map((card) => [card.id, card]))
+const cards = new Map(ALL_CARDS.map((card) => [card.id, card]))
 const events = new Map(EVENTS.map((event) => [event.id, event]))
 
 function claimPriority(game: Game, players: Player[], player: Player) {
@@ -115,7 +117,7 @@ function weightedDeck(random: () => number) {
 }
 
 function baseBudget(): ResourceMap {
-  return { money: 4, influence: 2, compute: 1, energy: 1 }
+  return { money: 0, influence: 0, compute: 0, energy: 0 }
 }
 
 function emptyIncome(): ResourceMap {
@@ -152,7 +154,9 @@ function fillMarket(game: Game) {
 
 function canAffordBase(card: Card) {
   const budget = baseBudget()
-  return RESOURCES.every((resource) => budget[resource] >= (card.cost[resource] ?? 0))
+  for (const cardId of STARTER_CARD_IDS) addBudget(budget, productiveIncome(cards.get(cardId)!))
+  const cardCost = effectiveCost(card)
+  return RESOURCES.every((resource) => budget[resource] >= cardCost[resource])
 }
 
 function seedOpeningMarket(game: Game) {
@@ -452,7 +456,7 @@ function makePlayer(name: string, strategy: Strategy): Player {
     name,
     strategy,
     budget: baseBudget(),
-    tableau: [],
+    tableau: [...STARTER_CARD_IDS],
     passed: false,
     initiative: false,
     score: 0,
@@ -513,7 +517,7 @@ function summarizeSingle(seed: number) {
   console.log('\nFinal')
   for (const player of [...players].sort((a, b) => b.score - a.score)) {
     console.log(
-      `${player.name} (${player.strategy}): ${player.score} VP, ${player.tableau.length} builds, ${player.effectBuilds} effects, ${player.scouts} scouts, income ${JSON.stringify(player.incomeBuilt)}`,
+      `${player.name} (${player.strategy}): ${player.score} VP, ${player.tableau.length - STARTER_CARD_IDS.length} builds, ${player.effectBuilds} effects, ${player.scouts} scouts, income ${JSON.stringify(player.incomeBuilt)}`,
     )
   }
   const avgPlayable = game.playableCounts.reduce((sum, count) => sum + count, 0) / game.playableCounts.length
@@ -576,7 +580,7 @@ function summarizeBatch(games: number) {
       bucket.games += 1
       bucket.wins += player === winner ? 1 : 0
       bucket.score += player.score
-      bucket.builds += player.tableau.length
+      bucket.builds += player.tableau.length - STARTER_CARD_IDS.length
       bucket.effects += player.effectBuilds
       bucket.scouts += player.scouts
       bucket.early += player.buildsByEra.early
@@ -646,7 +650,7 @@ function summarizeDuelBatch(gamesPerPair: number) {
           bucket.games += 1
           bucket.wins += player === winner ? 1 : 0
           bucket.score += player.score
-          bucket.builds += player.tableau.length
+          bucket.builds += player.tableau.length - STARTER_CARD_IDS.length
           bucket.effects += player.effectBuilds
           bucket.scouts += player.scouts
           bucket.chains += game.chains / players.length
@@ -690,6 +694,7 @@ function summarizeCardStats(games: number) {
     for (const player of players) {
       for (const cardId of player.tableau) {
         const bucket = stats[cardId]
+        if (!bucket) continue
         bucket.totalBuilds += 1
         bucket.playerBuilds += 1
         if (player === winner) {
@@ -755,10 +760,11 @@ function summarizeApexMirror(games: number) {
     if (winner === players[0]) firstSeatWins += 1
     for (const player of players) {
       totalScore += player.score
-      totalBuilds += player.tableau.length
+      totalBuilds += player.tableau.length - STARTER_CARD_IDS.length
       totalChains += game.chains / players.length
       for (const cardId of player.tableau) {
         const bucket = stats[cardId]
+        if (!bucket) continue
         bucket.totalBuilds += 1
         bucket.playerBuilds += 1
         if (player === winner) {

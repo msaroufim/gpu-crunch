@@ -7,6 +7,8 @@ import {
   CARDS,
   EVENTS,
   RESOURCES,
+  STARTER_CARD_IDS,
+  ALL_CARDS,
   type Card,
   type EventCard,
   type Resource,
@@ -63,7 +65,7 @@ const io = new Server(httpServer, {
 })
 
 const rooms = new Map<string, Room>()
-const cardsById = new Map(CARDS.map((card) => [card.id, card]))
+const cardsById = new Map(ALL_CARDS.map((card) => [card.id, card]))
 const eventsById = new Map(EVENTS.map((event) => [event.id, event]))
 const DEFAULT_ROOM_ID = 'POC'
 
@@ -105,7 +107,7 @@ function weightedDeck() {
 }
 
 function startingResources(): ResourceMap {
-  return { money: 4, influence: 2, compute: 1, energy: 1 }
+  return { money: 0, influence: 0, compute: 0, energy: 0 }
 }
 
 function freshPlayer(id: string, name: string, isBot = false, focus?: Resource[]): Player {
@@ -145,7 +147,7 @@ function newGame(): Game {
 function view(room: Room) {
   return {
     ...room,
-    cards: CARDS,
+    cards: ALL_CARDS,
     events: EVENTS,
   }
 }
@@ -225,7 +227,14 @@ function fillMarket(room: Room) {
 
 function canAffordBase(card: Card) {
   const budget = startingResources()
-  return RESOURCES.every((resource) => budget[resource] >= (card.cost[resource] ?? 0))
+  for (const cardId of STARTER_CARD_IDS) {
+    const starter = cardsById.get(cardId)
+    const income = starter ? productiveIncome(starter) : undefined
+    if (!income) continue
+    for (const resource of RESOURCES) budget[resource] += income[resource] ?? 0
+  }
+  const cost = effectiveCost(card)
+  return RESOURCES.every((resource) => budget[resource] >= cost[resource])
 }
 
 function seedOpeningMarket(room: Room) {
@@ -297,7 +306,7 @@ function startGame(room: Room) {
   room.players.forEach((player) => {
     player.resources = startingResources()
     player.tracks = emptyTracks()
-    player.tableau = []
+    player.tableau = [...STARTER_CARD_IDS]
     player.passed = false
     player.initiative = false
     player.actionsThisPhase = 0

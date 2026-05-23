@@ -226,6 +226,65 @@ button:disabled {
   color: #dce9f2;
 }
 
+.shock-queue {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(132px, 1fr));
+  gap: 8px;
+  margin: -6px 0 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.shock-card {
+  min-width: 132px;
+  border: 1px solid #c5d0da;
+  border-radius: 8px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 22px rgba(20, 37, 55, 0.06);
+}
+
+.shock-card.current {
+  border-color: #172331;
+  color: #f4f8fb;
+  background: #172331;
+}
+
+.shock-card span {
+  color: #687685;
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.shock-card.current span {
+  color: #aebdca;
+}
+
+.shock-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #132232;
+  font-size: 12px;
+  line-height: 1.12;
+}
+
+.shock-card.current strong {
+  color: #ffffff;
+}
+
+.shock-card p {
+  margin: 6px 0 0;
+  color: #5e6c78;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.shock-card.current p {
+  color: #d7e3ec;
+}
+
 .event-band h2,
 .section-heading h2,
 .rules-box h2,
@@ -638,6 +697,21 @@ button:disabled {
 .art-market .card-art,
 .art-toast .card-art {
   background-color: #765a31;
+}
+
+.art-starter .card-art {
+  background-color: #244f46;
+}
+
+.starter-chip {
+  width: fit-content;
+  border: 1px solid #9fc8be;
+  border-radius: 5px;
+  padding: 2px 6px;
+  color: #0f4f49;
+  background: #e6f6f0;
+  font-size: 10px;
+  font-weight: 950;
 }
 
 .game-card h3 {

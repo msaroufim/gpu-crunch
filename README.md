@@ -40,7 +40,15 @@ At the start of each phase:
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
 
-Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards that cost nothing, so the first turns are about choosing one starter card at a time. After that, market refills come from the normal deck order.
+Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards that cost nothing, so the first turns are about choosing one starter card at a time. Each starter opens a small tech branch:
+
+- `Substrate Supplier`: Money + Compute.
+- `Firmware Miracle`: Compute + Energy.
+- `Foundry Earthquake Insurance`: Money + Influence.
+- `Water Permit`: Influence + Energy.
+- `Hopper Fire Sale`: Money + Compute, tilted harder toward Compute.
+
+After the starter market, refills come from the normal deck order.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
@@ -74,7 +82,7 @@ Resources do not score. Leftover resources are discarded every phase.
 Cards with 3+ VP are point cards:
 
 - They do not produce income.
-- Printed VP above 2 adds extra Money and Compute cost.
+- Printed VP above 2 adds extra cost to the resources already shown in that card's cost.
 
 Printed resource bonuses on cards below 3 VP count as income icons. They refresh every phase and do not accumulate.
 
@@ -88,7 +96,7 @@ Every card belongs to one of a few clear effect families:
 - Shock: global debuff manipulation that replaces the current event with that card's forced event.
 
 There is no stealing or deleting built cards. Interaction comes from racing the public market, taking Priority, and forcing event windows.
-Priority cards pay an extra 3 Money and 1 Influence because acting first can create back-to-back tempo.
+Mid and late Priority cards pay extra cost in the resources already printed on the card because acting first can create back-to-back tempo.
 
 ## Card Roles
 

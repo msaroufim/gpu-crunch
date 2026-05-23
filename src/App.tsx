@@ -607,7 +607,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <h2>Scoring</h2>
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
             <p>You start at 0 resources. START cards are free, but building one still uses your one action for the shock.</p>
-            <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 adds Money and Compute cost.</p>
+            <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 makes their printed cost harsher.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>Each shock is one phase. Each player gets one action per shock: build one card or Scout.</p>
             <p>Scout skips your build, cycles the two leftmost market cards, and gives you first action next phase.</p>

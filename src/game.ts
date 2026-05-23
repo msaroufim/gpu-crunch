@@ -124,15 +124,23 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
     return { money: 99, influence: 99, compute: 99, energy: 99 }
   }
   if (card.starter) return cost
-  const moneyVpPremium = card.vp >= 3 ? card.vp === 3 ? 2 : card.vp - 2 : 0
-  const computeVpPremium = card.vp >= 3 ? Math.ceil((card.vp - 2) / 2) : 0
+  const printedCostTotal = RESOURCES.reduce((sum, resource) => sum + (card.cost[resource] ?? 0), 0)
+  const resourcePremium = (resource: Resource, premium: number) => {
+    if (premium <= 0) return 0
+    const printed = card.cost[resource] ?? 0
+    if (printedCostTotal === 0) return resource === 'money' ? premium : 0
+    if (printed === 0) return 0
+    return Math.max(1, Math.floor((premium * printed) / printedCostTotal))
+  }
+  const vpPremium = card.vp >= 3 ? card.vp === 3 ? 2 : card.vp - 2 : 0
+  const priorityPremium = card.effect === 'priority'
+    ? card.tier === 1 ? 0 : card.tier === 2 ? 2 : 3
+    : 0
   for (const resource of RESOURCES) {
     const eventMod = event?.costMod?.[resource] ?? 0
-    const premium = resource === 'money' ? moneyVpPremium : resource === 'compute' ? computeVpPremium : 0
+    const premium = resourcePremium(resource, vpPremium) + resourcePremium(resource, priorityPremium)
     const effectPremium =
-      card.effect === 'priority'
-        ? resource === 'money' ? 3 : resource === 'influence' ? 1 : 0
-        : card.effect === 'shock' && resource === 'influence'
+      card.effect === 'shock' && card.tier >= 2 && resource === 'influence'
           ? 1
           : 0
     cost[resource] = Math.max(0, (card.cost[resource] ?? 0) + eventMod + premium + effectPremium)
@@ -180,7 +188,7 @@ export const CARDS: Card[] = [
   c('advanced-packaging', 'Advanced Packaging', 'Fabrication', 2, 'mid', 'Tiny bridges, huge bottlenecks.', { money: 3, compute: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 3 }, 2, 'package'),
   c('euv-queue', 'Reverse-Engineered Lithography Rig', 'Fabrication', 2, 'mid', 'A clean-room project with suspiciously familiar tolerances.', { money: 3, influence: 1 }, undefined, { money: 1, compute: 1 }, { capacity: 2, policy: 1 }, 2, 'fab', 'shock'),
   c('cowos-expansion', 'CoWoS Expansion', 'Fabrication', 3, 'late', 'Capex turns into slots if you can wait long enough.', { money: 4, energy: 1 }, { compute: 3 }, { compute: 2 }, { capacity: 4, grid: 1 }, 4, 'package'),
-  c('substrate-supplier', 'Substrate Supplier', 'Fabrication', 1, 'early', 'The unglamorous layer that saves the quarter.', {}, { money: 2, compute: 1 }, { money: 1 }, { capacity: 1 }, 1, 'package', undefined, true),
+  c('substrate-supplier', 'Substrate Supplier', 'Fabrication', 1, 'early', 'The unglamorous layer that saves the quarter.', {}, { money: 1, compute: 1 }, { money: 1 }, { capacity: 1 }, 1, 'package', undefined, true),
   c('driver-team', 'Driver Team', 'Software', 1, 'early', 'Half the performance came from a Friday night patch.', { compute: 1 }, { compute: 1 }, { compute: 1 }, { moat: 2 }, 1, 'software', 'priority'),
   c('cuda-lock-in', 'CUDA Lock-in', 'Software', 2, 'mid', 'Every migration plan starts with a sigh.', { money: 2, compute: 2 }, undefined, { money: 1 }, { moat: 4 }, 3, 'software', 'shock'),
   c('jensen-soju-toast', 'Jensen Soju Toast', 'Market', 1, 'early', 'A table toast turns into another DRAM shipment.', { influence: 2 }, { influence: 1, compute: 1 }, undefined, { policy: 1, moat: 1 }, 2, 'toast', 'shock'),
@@ -189,12 +197,12 @@ export const CARDS: Card[] = [
   c('hyperscaler-panic-buy', 'GPU FOMO Panic Buy', 'Demand', 2, 'mid', 'A benchmark leak makes every CFO approve emergency spend.', { money: 3 }, { money: 1, compute: 1 }, undefined, { moat: 2 }, 2, 'cloud', 'priority'),
   c('export-license-counsel', 'Export License Counsel', 'Policy', 1, 'early', 'A lawyer turns ambiguity into shipment velocity.', { money: 1, influence: 1 }, { influence: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'shock'),
   c('data-center-rezoning', 'Election Year Zoning Deal', 'Energy', 2, 'mid', 'A governor needs jobs before November and the permits move overnight.', { money: 2, influence: 2 }, { energy: 2 }, undefined, { grid: 3, policy: 1 }, 2, 'power', 'shock'),
-  c('utility-interconnect', 'Utility Interconnect', 'Energy', 1, 'early', 'The queue number matters more than the brochure.', { money: 2, energy: 1 }, { energy: 1 }, { energy: 1 }, { grid: 2 }, 1, 'power'),
+  c('utility-interconnect', 'Utility Interconnect', 'Energy', 1, 'early', 'The queue number matters more than the brochure.', { energy: 1 }, { energy: 1 }, { energy: 1 }, { grid: 2 }, 1, 'power'),
   c('nuclear-ppa', 'Nuclear PPA', 'Energy', 3, 'late', 'Baseload with lawyers attached.', { money: 3, influence: 2, energy: 1 }, { energy: 3 }, { energy: 2 }, { grid: 5, policy: 1 }, 5, 'power', 'shock'),
-  c('liquid-cooling-retrofit', 'Liquid Cooling Retrofit', 'Energy', 2, 'mid', 'Your racks stop thermal throttling and start flexing.', { money: 2, energy: 2 }, { compute: 1 }, { compute: 1 }, { grid: 2, capacity: 1 }, 2, 'cooling', 'priority'),
+  c('liquid-cooling-retrofit', 'Liquid Cooling Retrofit', 'Energy', 2, 'mid', 'Your racks stop thermal throttling and start flexing.', { compute: 2, energy: 2 }, { compute: 1 }, { compute: 1 }, { grid: 2, capacity: 1 }, 2, 'cooling', 'priority'),
   c('blackwell-ramp', 'Blackwell Ramp Goes Vertical', 'Silicon', 3, 'late', 'The flagship finally ships and the whole roadmap gets pulled forward.', { money: 4, compute: 1, energy: 1 }, { compute: 4 }, { compute: 2 }, { capacity: 5, moat: 2 }, 6, 'fab', 'priority'),
-  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', {}, { compute: 2 }, undefined, { capacity: 1 }, 1, 'market', undefined, true),
-  c('refurbished-mining-rigs', 'Gray-Market Mining Rigs', 'Market', 1, 'early', 'Hashrate becomes batch inference if you squint.', { money: 1, energy: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 1, grid: -1 }, 1, 'market', 'priority'),
+  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', {}, { compute: 2 }, { money: 1 }, { capacity: 1 }, 1, 'market', undefined, true),
+  c('refurbished-mining-rigs', 'Gray-Market Mining Rigs', 'Market', 1, 'early', 'Hashrate becomes batch inference if you squint.', { compute: 1, energy: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 1, grid: -1 }, 1, 'market', 'priority'),
   c('gray-market-broker', 'Dubai Gray-Market Broker', 'Market', 2, 'mid', 'It arrives with no warranty, three invoices, and perfect timing.', { money: 2, influence: 1 }, { compute: 2 }, undefined, { capacity: 1, policy: -1 }, 2, 'market', 'shock'),
   c('benchmark-leak', 'Vaguepost', 'Market', 1, 'early', 'One founder posts a GPU emoji and the market invents a roadmap.', { influence: 1 }, { money: 1 }, undefined, { moat: 2 }, 1, 'market', 'shock'),
   c('analyst-day', 'Analyst Day', 'Market', 1, 'early', 'Slides become financing.', { influence: 1 }, { money: 3 }, { money: 1 }, { moat: 1, policy: 1 }, 1, 'market', 'priority'),
@@ -214,17 +222,17 @@ export const CARDS: Card[] = [
   c('startup-allocation-lottery', 'Startup Allocation Lottery', 'Demand', 1, 'early', 'You won four boards and a cloud credit coupon.', { influence: 1, money: 1 }, { compute: 2, money: 1 }, undefined, { moat: 1 }, 1, 'cloud', 'priority'),
   c('model-training-deadline', 'Ship the Model', 'Demand', 2, 'mid', 'The evals are weird, the launch date is real, and every cluster gets emptied.', { money: 2, compute: 2 }, { money: 2 }, undefined, { moat: 3 }, 2, 'cloud', 'priority'),
   c('inference-optimization', 'Acquire vLLM Team', 'Software', 2, 'mid', 'The fastest kernel is the one you bought before lunch.', { compute: 2 }, { energy: 2 }, { money: 1 }, { moat: 2, grid: 1 }, 3, 'software', 'priority'),
-  c('scheduler-wizard', 'Scheduler Wizard', 'Software', 1, 'early', 'Utilization rises without buying another rack.', { money: 1, compute: 1 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'software', 'priority'),
+  c('scheduler-wizard', 'Scheduler Wizard', 'Software', 1, 'early', 'Utilization rises without buying another rack.', { compute: 1 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'software', 'priority'),
   c('power-cap-firmware', 'Power Cap Firmware', 'Energy', 1, 'early', 'Less clock, more cluster.', { compute: 1 }, { energy: 2 }, { energy: 1 }, { grid: 2 }, 1, 'power'),
   c('carbon-credit-swap', 'Carbon Credit Swap', 'Energy', 2, 'mid', 'A spreadsheet finds clean power in another county.', { money: 2, influence: 1 }, { energy: 1, influence: 1 }, undefined, { grid: 2, policy: 1 }, 2, 'power', 'shock'),
-  c('water-permit', 'Water Permit', 'Energy', 1, 'early', 'Cooling begins at the county office.', {}, { energy: 1 }, { energy: 1 }, { grid: 1, policy: 1 }, 1, 'cooling', undefined, true),
+  c('water-permit', 'Water Permit', 'Energy', 1, 'early', 'Cooling begins at the county office.', {}, { energy: 1 }, { influence: 1 }, { grid: 1, policy: 1 }, 1, 'cooling', undefined, true),
   c('heat-reuse-district', 'Heat Reuse District', 'Energy', 2, 'mid', 'Waste heat becomes political capital.', { money: 2, energy: 1 }, { influence: 2 }, { influence: 1 }, { grid: 2, policy: 2 }, 3, 'cooling', 'shock'),
   c('open-source-compiler', 'Open Source Compiler', 'Software', 2, 'mid', 'The community finds performance you did not budget for.', { compute: 1, influence: 2 }, { compute: 1 }, { compute: 1 }, { moat: 2, policy: 1 }, 3, 'software', 'shock'),
   c('vendor-lock-review', 'Vendor Lock Review', 'Policy', 2, 'mid', 'A procurement memo slows the leader down.', { influence: 2, compute: 1 }, { influence: 1 }, undefined, { policy: 2 }, 2, 'policy', 'shock'),
   c('antitrust-hearing', 'Antitrust Hearing Meltdown', 'Policy', 3, 'late', 'Every moat becomes a hearing exhibit and procurement teams freeze.', { influence: 4, money: 1 }, { influence: 2 }, undefined, { policy: 5, moat: -1 }, 4, 'policy', 'shock'),
   c('boardroom-pivot', 'Boardroom Pivot', 'Market', 2, 'mid', 'The company is an AI infrastructure business now.', { money: 2, influence: 1 }, { money: 1, energy: 1 }, undefined, { moat: 2, grid: 1 }, 2, 'market', 'shock'),
   c('ipo-war-chest', 'Meme-Stock AI IPO', 'Market', 3, 'late', 'Retail euphoria becomes a war chest before lockup expires.', { money: 2, influence: 2 }, { money: 5 }, { money: 1 }, { moat: 3 }, 5, 'market', 'priority'),
-  c('crypto-demand-returns', 'Crypto Demand Returns', 'Demand', 2, 'mid', 'The bid stack gets weird again.', { energy: 2, money: 2 }, { money: 3 }, undefined, { moat: 1, grid: -1 }, 3, 'market', 'shock'),
+  c('crypto-demand-returns', 'Crypto Demand Returns', 'Demand', 2, 'mid', 'The bid stack gets weird again.', { compute: 2, energy: 2 }, { money: 3 }, undefined, { moat: 1, grid: -1 }, 3, 'market', 'shock'),
   c('sanctions-shock', 'China War Games Around Taiwan', 'Risk', 3, 'late', 'Joint Sword drills make every sourcing plan feel one headline away from failure.', { influence: 3, money: 2 }, { influence: 2, compute: 1 }, undefined, { policy: 4 }, 4, 'risk', 'shock'),
   c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { money: 3, compute: 1, energy: 1 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'priority'),
 ]

@@ -9,6 +9,7 @@
     "server": "tsx watch server.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "print:cards": "tsx scripts/generate-print-assets.ts",
     "playtest": "tsx scripts/playtest.ts",
     "preview": "vite preview",
     "start": "tsx server.ts"

@@ -15,6 +15,22 @@ Open `http://localhost:5173`.
 
 The prototype starts a default game immediately with you and two bots.
 
+## Print Assets
+
+Generate one poker-card-sized PNG for every deck card and event:
+
+```bash
+npm run print:cards
+```
+
+The script renders from the game metadata in `src/game.ts` and writes:
+
+- `print-assets/cards/*.png`
+- `print-assets/events/*.png`
+- `print-assets/manifest.json`
+
+Each PNG is `750x1050`, equivalent to a 2.5" x 3.5" card at 300 DPI.
+
 ## Core Idea
 
 Players compete to build the strongest AI infrastructure tableau from a shared market of cards. Every card is intentionally powerful, but the market is public, so the interaction comes from timing, denial, and choosing which broken opportunity to take before someone else does.

@@ -1,6 +1,7 @@
 export type Resource = 'money' | 'influence' | 'compute' | 'energy'
 export type Track = 'capacity' | 'policy' | 'grid' | 'moat'
 export type Era = 'early' | 'mid' | 'late'
+export type CardRole = 'Setup' | 'Protect' | 'Timing' | 'Punish' | 'Finisher'
 
 export type ResourceMap = Record<Resource, number>
 export type TrackMap = Record<Track, number>
@@ -78,6 +79,22 @@ export const effectRules: Record<EffectId, { name: string; text: string; broken?
   shock: { name: 'Shock', text: 'Global debuff: replace the current event with the next event in the deck.', broken: true },
   seize: { name: 'Seize', text: "Take the highest-VP card from the current leader's tableau.", broken: true },
   destroy: { name: 'Destroy', text: "Trash the highest-VP card from the current leader's tableau. If none, trash the highest-VP market card.", broken: true },
+}
+
+export const cardRole = (card: Card): CardRole => {
+  if (card.vp >= 4) return 'Finisher'
+  if (card.effect === 'seize' || card.effect === 'destroy') return 'Punish'
+  if (card.effect === 'shock' || card.effect === 'priority') return 'Timing'
+  if (card.effect === 'shield' || card.effect === 'decoy') return 'Protect'
+  return 'Setup'
+}
+
+export const roleHelp: Record<CardRole, string> = {
+  Setup: 'Build income for later turns.',
+  Protect: 'Keep your real payoff alive.',
+  Timing: 'Win the market or event window.',
+  Punish: 'Attack an exposed leader.',
+  Finisher: 'Expensive points that close the game.',
 }
 
 export const emptyResources = (): ResourceMap => ({

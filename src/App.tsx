@@ -16,10 +16,12 @@ import {
 import {
   CARDS,
   RESOURCES,
+  cardRole,
   effectRules,
   effectiveCost,
   productiveIncome,
   resourceLabels,
+  roleHelp,
   type Card,
   type EventCard,
   type Resource,
@@ -208,6 +210,7 @@ function CardView({
         <span>{card.suit}</span>
         <strong>{card.vp} VP</strong>
       </div>
+      <div className="role-chip" title={roleHelp[cardRole(card)]}>{cardRole(card)}</div>
       <h3>{card.name}</h3>
       {!compact && <p>{card.flavor}</p>}
       {!compact && (
@@ -366,6 +369,29 @@ function BrokenMechanics() {
           <p key={effect.name}>
             <strong>{effect.name}</strong>
             <span>{effect.text}</span>
+          </p>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ComboGuide() {
+  const combos = [
+    ['Decoy -> Finisher', 'Use a Decoy before an exposed high-VP card so Seize and Destroy hit the decoy first.'],
+    ['Priority -> Market Snipe', 'Take initiative before a visible late card or key resource card gets contested.'],
+    ['Shock -> Bad Window', 'Build first, then push the table into a worse event for everyone still waiting.'],
+    ['Seize/Destroy -> Naked Leader', 'Punish a player who built points without Shield or Decoy cover.'],
+  ]
+
+  return (
+    <section className="rules-box">
+      <h2>Combos</h2>
+      <div className="mechanic-list">
+        {combos.map(([name, text]) => (
+          <p key={name}>
+            <strong>{name}</strong>
+            <span>{text}</span>
           </p>
         ))}
       </div>
@@ -532,6 +558,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>
           <BrokenMechanics />
+          <ComboGuide />
           <section className="rules-box">
             <h2>Log</h2>
             <ol className="log-list">

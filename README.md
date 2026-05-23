@@ -85,6 +85,23 @@ Every card belongs to one of a few clear effect families:
 
 The design principle is that every card should feel unfair in a concrete way, while the public market gives opponents a chance to race, deny, or punish it.
 
+## Card Roles
+
+Cards show a lightweight role tag to make the deck easier to scan:
+
+- Setup: build income for later turns.
+- Protect: keep your real payoff alive.
+- Timing: win the market or event window.
+- Punish: attack an exposed leader.
+- Finisher: expensive points that close the game.
+
+## Common Combos
+
+- Decoy -> Finisher: build a Decoy before a big VP card so Seize and Destroy hit the decoy first.
+- Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
+- Shock -> Bad Window: build first, then push the table into a worse event for everyone still waiting.
+- Seize/Destroy -> Naked Leader: punish a player who built points without Shield or Decoy cover.
+
 ## Current Card Themes
 
 The deck includes cards like:

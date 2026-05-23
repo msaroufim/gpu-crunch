@@ -543,6 +543,10 @@ button:disabled {
   box-shadow: 0 12px 26px rgba(18, 34, 51, 0.08);
 }
 
+.game-card.starter-card {
+  border-color: #8db064;
+}
+
 .game-card.compact {
   width: 156px;
   min-height: 0;
@@ -610,6 +614,19 @@ button:disabled {
 .empty-cluster {
   color: #687685;
   background: #f2f4f6;
+}
+
+.starter-cost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 21px;
+  border-radius: 5px;
+  padding: 1px 7px;
+  color: #20410f;
+  background: #e7f4d3;
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
 }
 
 .card-art {
@@ -699,21 +716,6 @@ button:disabled {
   background-color: #765a31;
 }
 
-.art-starter .card-art {
-  background-color: #244f46;
-}
-
-.starter-chip {
-  width: fit-content;
-  border: 1px solid #9fc8be;
-  border-radius: 5px;
-  padding: 2px 6px;
-  color: #0f4f49;
-  background: #e6f6f0;
-  font-size: 10px;
-  font-weight: 950;
-}
-
 .game-card h3 {
   margin: 0;
   min-height: 45px;
@@ -743,7 +745,14 @@ button:disabled {
   white-space: nowrap;
 }
 
-.role-chip {
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.role-chip,
+.starter-chip {
   width: fit-content;
   border: 1px solid #cfd8df;
   border-radius: 999px;
@@ -752,6 +761,12 @@ button:disabled {
   background: #eef3f6;
   font-size: 11px;
   font-weight: 900;
+}
+
+.starter-chip {
+  border-color: #9dbb70;
+  color: #20410f;
+  background: #e7f4d3;
 }
 
 .game-card p {

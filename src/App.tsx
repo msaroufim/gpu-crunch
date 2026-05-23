@@ -14,7 +14,7 @@ import {
   Zap,
 } from 'lucide-react'
 import {
-  ALL_CARDS,
+  CARDS,
   EVENTS,
   RESOURCES,
   cardRole,
@@ -95,7 +95,6 @@ const artGlyphs: Record<Card['art'], string> = {
   risk: '!',
   toast: '乾',
   cooling: '°C',
-  starter: 'START',
 }
 
 function useSocket() {
@@ -194,14 +193,15 @@ function CardView({
 }) {
   const affordable = owner ? canBuild(owner, card, event) : true
   const effect = card.effect ? effectRules[card.effect] : undefined
-  const isStarter = card.suit === 'Starter'
   const forcedEvent = card.effect === 'shock'
     ? EVENTS.find((candidate) => candidate.id === shockEventForCard(card))
     : undefined
   const effectText = forcedEvent ? `${effect?.text} Forces: ${forcedEvent.name}.` : effect?.text
+  const displayCost = effectiveCost(card, event)
+  const blockedByEvent = RESOURCES.some((resource) => displayCost[resource] >= 50)
 
   return (
-    <article className={`game-card tier-${card.tier} ${compact ? 'compact' : ''} ${highlighted ? 'market-choice' : ''} art-${card.art}`}>
+    <article className={`game-card tier-${card.tier} ${card.starter ? 'starter-card' : ''} ${compact ? 'compact' : ''} ${highlighted ? 'market-choice' : ''} art-${card.art}`}>
       <div className="card-topline">
         <div className="card-corner">
           <small>Income</small>
@@ -209,7 +209,7 @@ function CardView({
         </div>
         <div className="card-corner right">
           <small>Cost</small>
-          <ResourceCluster values={effectiveCost(card, event)} kind="cost" />
+          {card.starter && !blockedByEvent ? <span className="starter-cost">Free</span> : <ResourceCluster values={displayCost} kind="cost" />}
         </div>
       </div>
       <div className="card-art" aria-hidden="true">
@@ -219,8 +219,10 @@ function CardView({
         <span>{card.suit}</span>
         <strong>{card.vp} VP</strong>
       </div>
-      {isStarter && <div className="starter-chip">START</div>}
-      <div className="role-chip" title={roleHelp[cardRole(card)]}>{cardRole(card)}</div>
+      <div className="card-tags">
+        {card.starter && <div className="starter-chip" title="Free opening card">START</div>}
+        <div className="role-chip" title={roleHelp[cardRole(card)]}>{cardRole(card)}</div>
+      </div>
       <h3>{card.name}</h3>
       {!compact && <p>{card.flavor}</p>}
       {!compact && effect && (
@@ -267,7 +269,7 @@ function PlayerPanel({ player, active, you, seat }: { player: Player; active: bo
       </div>
       <div className="tableau-strip">
         {player.tableau.slice(-5).map((cardId) => {
-          const card = ALL_CARDS.find((candidate) => candidate.id === cardId)
+          const card = CARDS.find((candidate) => candidate.id === cardId)
           return card ? <span key={cardId}>{card.name}</span> : null
         })}
       </div>
@@ -459,7 +461,7 @@ function Glossary({ cards, onClose }: { cards: Card[]; onClose: () => void }) {
       <section className="glossary">
         <div className="glossary-header">
           <div>
-            <span>52-card deck + starters</span>
+            <span>52-card deck</span>
             <h2>Card Glossary</h2>
           </div>
           <button type="button" className="secondary icon-button" onClick={onClose} aria-label="Close glossary">
@@ -604,6 +606,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
           <section className="rules-box">
             <h2>Scoring</h2>
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
+            <p>You start at 0 resources. START cards are free, but building one still uses your one action for the shock.</p>
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 adds Money and Compute cost.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>Each shock is one phase. Each player gets one action per shock: build one card or Scout.</p>

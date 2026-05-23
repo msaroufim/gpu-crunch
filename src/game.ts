@@ -20,6 +20,7 @@ export type Card = {
   vp: number
   effect?: EffectId
   art: ArtKey
+  starter?: boolean
 }
 
 export type EffectId =
@@ -39,7 +40,6 @@ export type ArtKey =
   | 'risk'
   | 'toast'
   | 'cooling'
-  | 'starter'
 
 export type EventCard = {
   id: string
@@ -123,6 +123,7 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   if (event?.blockedSuits?.includes(card.suit)) {
     return { money: 99, influence: 99, compute: 99, energy: 99 }
   }
+  if (card.starter) return cost
   const moneyVpPremium = card.vp >= 3 ? card.vp === 3 ? 2 : card.vp - 2 : 0
   const computeVpPremium = card.vp >= 3 ? Math.ceil((card.vp - 2) / 2) : 0
   for (const resource of RESOURCES) {
@@ -155,6 +156,7 @@ const c = (
   vp: number,
   art: ArtKey,
   effect?: EffectId,
+  starter = false,
 ): Card => ({
   id,
   name,
@@ -169,6 +171,7 @@ const c = (
   vp,
   art,
   effect,
+  starter,
 })
 
 export const CARDS: Card[] = [
@@ -177,7 +180,7 @@ export const CARDS: Card[] = [
   c('advanced-packaging', 'Advanced Packaging', 'Fabrication', 2, 'mid', 'Tiny bridges, huge bottlenecks.', { money: 3, compute: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 3 }, 2, 'package'),
   c('euv-queue', 'Reverse-Engineered Lithography Rig', 'Fabrication', 2, 'mid', 'A clean-room project with suspiciously familiar tolerances.', { money: 3, influence: 1 }, undefined, { money: 1, compute: 1 }, { capacity: 2, policy: 1 }, 2, 'fab', 'shock'),
   c('cowos-expansion', 'CoWoS Expansion', 'Fabrication', 3, 'late', 'Capex turns into slots if you can wait long enough.', { money: 4, energy: 1 }, { compute: 3 }, { compute: 2 }, { capacity: 4, grid: 1 }, 4, 'package'),
-  c('substrate-supplier', 'Substrate Supplier', 'Fabrication', 1, 'early', 'The unglamorous layer that saves the quarter.', { money: 1 }, { money: 2, compute: 1 }, { money: 1 }, { capacity: 1 }, 1, 'package'),
+  c('substrate-supplier', 'Substrate Supplier', 'Fabrication', 1, 'early', 'The unglamorous layer that saves the quarter.', {}, { money: 2, compute: 1 }, { money: 1 }, { capacity: 1 }, 1, 'package', undefined, true),
   c('driver-team', 'Driver Team', 'Software', 1, 'early', 'Half the performance came from a Friday night patch.', { compute: 1 }, { compute: 1 }, { compute: 1 }, { moat: 2 }, 1, 'software', 'priority'),
   c('cuda-lock-in', 'CUDA Lock-in', 'Software', 2, 'mid', 'Every migration plan starts with a sigh.', { money: 2, compute: 2 }, undefined, { money: 1 }, { moat: 4 }, 3, 'software', 'shock'),
   c('jensen-soju-toast', 'Jensen Soju Toast', 'Market', 1, 'early', 'A table toast turns into another DRAM shipment.', { influence: 2 }, { influence: 1, compute: 1 }, undefined, { policy: 1, moat: 1 }, 2, 'toast', 'shock'),
@@ -190,7 +193,7 @@ export const CARDS: Card[] = [
   c('nuclear-ppa', 'Nuclear PPA', 'Energy', 3, 'late', 'Baseload with lawyers attached.', { money: 3, influence: 2, energy: 1 }, { energy: 3 }, { energy: 2 }, { grid: 5, policy: 1 }, 5, 'power', 'shock'),
   c('liquid-cooling-retrofit', 'Liquid Cooling Retrofit', 'Energy', 2, 'mid', 'Your racks stop thermal throttling and start flexing.', { money: 2, energy: 2 }, { compute: 1 }, { compute: 1 }, { grid: 2, capacity: 1 }, 2, 'cooling', 'priority'),
   c('blackwell-ramp', 'Blackwell Ramp Goes Vertical', 'Silicon', 3, 'late', 'The flagship finally ships and the whole roadmap gets pulled forward.', { money: 4, compute: 1, energy: 1 }, { compute: 4 }, { compute: 2 }, { capacity: 5, moat: 2 }, 6, 'fab', 'priority'),
-  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', { money: 1 }, { compute: 2 }, undefined, { capacity: 1 }, 1, 'market'),
+  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', {}, { compute: 2 }, undefined, { capacity: 1 }, 1, 'market', undefined, true),
   c('refurbished-mining-rigs', 'Gray-Market Mining Rigs', 'Market', 1, 'early', 'Hashrate becomes batch inference if you squint.', { money: 1, energy: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 1, grid: -1 }, 1, 'market', 'priority'),
   c('gray-market-broker', 'Dubai Gray-Market Broker', 'Market', 2, 'mid', 'It arrives with no warranty, three invoices, and perfect timing.', { money: 2, influence: 1 }, { compute: 2 }, undefined, { capacity: 1, policy: -1 }, 2, 'market', 'shock'),
   c('benchmark-leak', 'Vaguepost', 'Market', 1, 'early', 'One founder posts a GPU emoji and the market invents a roadmap.', { influence: 1 }, { money: 1 }, undefined, { moat: 2 }, 1, 'market', 'shock'),
@@ -198,12 +201,12 @@ export const CARDS: Card[] = [
   c('lobbyist-dinner', 'Anti-AI Protest Backlash', 'Policy', 2, 'mid', 'A protest blocks one site and quietly unlocks subsidies in another state.', { money: 2, influence: 1 }, { influence: 1 }, undefined, { policy: 3 }, 2, 'policy', 'shock'),
   c('customs-waiver', 'Customs Waiver', 'Policy', 1, 'early', 'A signature beats a warehouse full of boxes.', { influence: 1 }, { money: 1, compute: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'shock'),
   c('tariff-arbitrage', 'Tariff Midnight Loophole', 'Policy', 2, 'mid', 'The route is longer, the invoice is cleaner, and rivals eat the delay.', { money: 2, influence: 2 }, { money: 2 }, undefined, { policy: 2, moat: 1 }, 2, 'policy', 'shock'),
-  c('earthquake-insurance', 'Foundry Earthquake Insurance', 'Risk', 1, 'early', 'You cannot stop the quake, but you can buy resilience.', { money: 1 }, { influence: 1 }, { money: 1 }, { policy: 1, capacity: 1 }, 1, 'risk'),
+  c('earthquake-insurance', 'Foundry Earthquake Insurance', 'Risk', 1, 'early', 'You cannot stop the quake, but you can buy resilience.', {}, { influence: 1 }, { money: 1 }, { policy: 1, capacity: 1 }, 1, 'risk', undefined, true),
   c('port-strike-buffer', 'Port Strike Buffer', 'Risk', 1, 'early', 'Inventory is inefficient until it saves you.', { money: 2 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'risk'),
   c('dram-price-spike', 'DRAM Price Spike', 'Memory', 2, 'mid', 'A bad quarter for buyers, a great quarter for you.', { money: 2, influence: 1 }, { money: 3 }, undefined, { moat: 2 }, 2, 'memory', 'shock'),
   c('networking-fabric', 'Networking Fabric', 'Cluster', 2, 'mid', 'The GPUs were never the whole cluster.', { money: 3, compute: 1 }, { compute: 1 }, { compute: 1 }, { capacity: 2, moat: 1 }, 2, 'network', 'priority'),
   c('infiniband-switch', 'InfiniBand Switch', 'Cluster', 2, 'mid', 'Latency is a resource if you can monopolize it.', { money: 3, energy: 1 }, undefined, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'network'),
-  c('firmware-miracle', 'Firmware Miracle', 'Software', 1, 'early', 'The same silicon gets a better story.', { compute: 1 }, { compute: 1, energy: 1 }, undefined, { moat: 1 }, 1, 'software'),
+  c('firmware-miracle', 'Firmware Miracle', 'Software', 1, 'early', 'The same silicon gets a better story.', {}, { compute: 1, energy: 1 }, undefined, { moat: 1 }, 1, 'software', undefined, true),
   c('chiplet-yield-fix', 'Chiplet Yield Fix', 'Silicon', 2, 'mid', 'A package-level fix turns scraps into margin.', { money: 3, compute: 1 }, { money: 1, compute: 1 }, { money: 1 }, { capacity: 2, moat: 1 }, 2, 'package'),
   c('silicon-photonics-bet', 'Secret Photonics Breakthrough', 'Cluster', 3, 'late', 'The lab demo works once and the board decides once is enough.', { money: 3, compute: 1, influence: 1 }, { compute: 3 }, { compute: 1 }, { capacity: 3, moat: 3 }, 5, 'network', 'shock'),
   c('government-supercluster', 'Election Supercluster Pledge', 'Policy', 3, 'late', 'A campaign promise turns into a national compute purchasing program.', { money: 3, influence: 3, energy: 1 }, { compute: 3 }, { influence: 1, compute: 1 }, { policy: 4, capacity: 2 }, 5, 'policy', 'shock'),
@@ -214,7 +217,7 @@ export const CARDS: Card[] = [
   c('scheduler-wizard', 'Scheduler Wizard', 'Software', 1, 'early', 'Utilization rises without buying another rack.', { money: 1, compute: 1 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'software', 'priority'),
   c('power-cap-firmware', 'Power Cap Firmware', 'Energy', 1, 'early', 'Less clock, more cluster.', { compute: 1 }, { energy: 2 }, { energy: 1 }, { grid: 2 }, 1, 'power'),
   c('carbon-credit-swap', 'Carbon Credit Swap', 'Energy', 2, 'mid', 'A spreadsheet finds clean power in another county.', { money: 2, influence: 1 }, { energy: 1, influence: 1 }, undefined, { grid: 2, policy: 1 }, 2, 'power', 'shock'),
-  c('water-permit', 'Water Permit', 'Energy', 1, 'early', 'Cooling begins at the county office.', { influence: 1, money: 1 }, { energy: 1 }, { energy: 1 }, { grid: 1, policy: 1 }, 1, 'cooling'),
+  c('water-permit', 'Water Permit', 'Energy', 1, 'early', 'Cooling begins at the county office.', {}, { energy: 1 }, { energy: 1 }, { grid: 1, policy: 1 }, 1, 'cooling', undefined, true),
   c('heat-reuse-district', 'Heat Reuse District', 'Energy', 2, 'mid', 'Waste heat becomes political capital.', { money: 2, energy: 1 }, { influence: 2 }, { influence: 1 }, { grid: 2, policy: 2 }, 3, 'cooling', 'shock'),
   c('open-source-compiler', 'Open Source Compiler', 'Software', 2, 'mid', 'The community finds performance you did not budget for.', { compute: 1, influence: 2 }, { compute: 1 }, { compute: 1 }, { moat: 2, policy: 1 }, 3, 'software', 'shock'),
   c('vendor-lock-review', 'Vendor Lock Review', 'Policy', 2, 'mid', 'A procurement memo slows the leader down.', { influence: 2, compute: 1 }, { influence: 1 }, undefined, { policy: 2 }, 2, 'policy', 'shock'),
@@ -226,25 +229,23 @@ export const CARDS: Card[] = [
   c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { money: 3, compute: 1, energy: 1 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'priority'),
 ]
 
-export const STARTER_CARDS: Card[] = [
-  c('starter-seed-capital', 'Seed Capital', 'Starter', 1, 'early', 'Enough cash to place the first real order.', {}, undefined, { money: 3 }, {}, 0, 'starter'),
-  c('starter-policy-contact', 'Policy Contact', 'Starter', 1, 'early', 'One phone number that still gets picked up.', {}, undefined, { influence: 1 }, {}, 0, 'starter'),
-  c('starter-cloud-credit', 'Cloud Credit', 'Starter', 1, 'early', 'A small allocation before the procurement process wakes up.', {}, undefined, { compute: 1 }, {}, 0, 'starter'),
-  c('starter-power-reservation', 'Power Reservation', 'Starter', 1, 'early', 'A modest grid commitment for the first rack.', {}, undefined, { energy: 1 }, {}, 0, 'starter'),
+export const OPENING_MARKET_CARD_IDS = [
+  'substrate-supplier',
+  'firmware-miracle',
+  'earthquake-insurance',
+  'water-permit',
+  'hopper-fire-sale',
 ]
 
-export const STARTER_CARD_IDS = STARTER_CARDS.map((card) => card.id)
-export const ALL_CARDS = [...STARTER_CARDS, ...CARDS]
-
 export const EVENTS: EventCard[] = [
-  { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -1. Gain +1 Influence.', costMod: { money: -1 }, incomeMod: { influence: 1 } },
+  { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -1. Influence costs +1.', costMod: { money: -1, influence: 1 } },
   { id: 'tariff-whiplash', name: 'Tariff Whiplash', headline: 'The same shipment has three different prices.', rule: 'Money costs +1.', costMod: { money: 1 } },
-  { id: 'asml-credential-leak', name: 'ASML Credential Leak', headline: 'A toolchain login becomes a board-level incident.', rule: 'Influence costs +1. Gain +1 Compute.', costMod: { influence: 1 }, incomeMod: { compute: 1 } },
+  { id: 'asml-credential-leak', name: 'ASML Credential Leak', headline: 'A toolchain login becomes a board-level incident.', rule: 'Influence costs +1. Compute costs -1.', costMod: { influence: 1, compute: -1 } },
   { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Fabrication cards cannot be built this phase.', blockedSuits: ['Fabrication'] },
   { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Software cards cannot be built this phase.', blockedSuits: ['Software'] },
-  { id: 'hbm-sold-out', name: 'HBM Sold Out', headline: 'Memory vendors stop answering calls.', rule: 'Compute costs +1. Gain +1 Influence.', costMod: { compute: 1 }, incomeMod: { influence: 1 } },
+  { id: 'hbm-sold-out', name: 'HBM Sold Out', headline: 'Memory vendors stop answering calls.', rule: 'Compute costs +1. Money costs -1.', costMod: { compute: 1, money: -1 } },
   { id: 'power-price-spike', name: 'Power Price Spike', headline: 'The marginal megawatt gets ugly.', rule: 'Energy budget -1.', incomeMod: { energy: -1 } },
-  { id: 'panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Gain +1 Money and +1 Compute.', incomeMod: { money: 1, compute: 1 } },
+  { id: 'panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Money costs -1. Compute costs -1.', costMod: { money: -1, compute: -1 } },
 ]
 
 const shockEventByCardId: Record<string, string> = {

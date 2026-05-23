@@ -36,16 +36,16 @@ At the start of each phase:
 
 - Reveal one event shock.
 - Reset each player's temporary budget.
-- Budget equals income icons from visible tableau cards, modified by the event.
+- Budget starts at 0, then adds income icons from visible tableau cards, modified by the event.
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
 
-Each player starts with the same four visible Starter cards in tableau: `Seed Capital`, `Policy Contact`, `Cloud Credit`, and `Power Reservation`. They are not part of the 52-card deck.
-The opening market is seeded with five affordable early cards from the main deck; after that, market refills come from the normal non-starter deck order.
+Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards that cost nothing, so the first turns are about choosing one starter card at a time. After that, market refills come from the normal deck order.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
 Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`.
+Events can change costs, block suits, or reduce budgets, but they do not create starting resources. Resource access comes from built cards.
 
 On your turn, choose one:
 
@@ -77,6 +77,8 @@ Cards with 3+ VP are point cards:
 - Printed VP above 2 adds extra Money and Compute cost.
 
 Printed resource bonuses on cards below 3 VP count as income icons. They refresh every phase and do not accumulate.
+
+`START` cards are free opening cards. Building one still uses your single action for that phase.
 
 ## Broken Mechanics
 

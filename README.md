@@ -57,15 +57,14 @@ At the start of each phase:
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
 
-Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards plus seven normal deck cards, so the first turns are about choosing one starter card at a time while seeing early branches. Each starter opens a small tech branch:
+Players start with no tableau and 0 resources. The first four market slots are permanent `START` supply piles, so the first turns are about choosing a simple resource lane before branching into the normal market:
 
-- `Substrate Supplier`: Money + Compute.
-- `Firmware Miracle`: Compute + Energy.
-- `Foundry Earthquake Insurance`: Money + Influence.
-- `Water Permit`: Influence + Energy.
-- `Hopper Fire Sale`: Money + Compute, tilted harder toward Compute.
+- `Broker Capacity`: Compute lane. Turns into cloud preorders, memory allocation, networking, and late Blackwell/cluster cards.
+- `Acquire Lease`: Energy lane. Turns into interconnects, zoning deals, cooling, and giant datacenter campuses.
+- `Stock Buyback`: Money lane. Turns into analyst hype, market pivots, panic buys, and IPO/war-chest plays.
+- `Regulatory Fixer`: Influence lane. Turns into export licenses, tariff routing, sovereign AI deals, and government superclusters.
 
-After the starter market, new cards enter only when Scout fills empty supply slots from the normal deck order.
+The other 8 market slots begin with two follow-up cards per lane, then new cards enter only when Scout fills empty main supply slots from the normal deck order.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals an 11-phase crisis queue after the opening draft by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
@@ -75,7 +74,7 @@ Events can change costs, block suits, or reduce budgets, but they do not create 
 On your turn, choose one:
 
 - Build one card from the common market.
-- Scout: fill every empty market slot from the deck. If the Priority Card is unclaimed this phase, take it.
+- Scout: fill empty main market slots from the deck. If the Priority Card is unclaimed this phase, take it.
 
 Scout only when you hate every build or need Priority. Most turns should build a card.
 
@@ -105,7 +104,7 @@ Cards with 3+ VP are point cards:
 
 Printed resource bonuses on cards below 3 VP count as income icons. They refresh every phase and do not accumulate.
 
-`START` cards are free opening cards. Building one still uses your single action for that phase.
+`START` cards are free opening cards. Each player can build exactly one START card, and it still uses your single action for that phase.
 
 ## Broken Mechanics
 

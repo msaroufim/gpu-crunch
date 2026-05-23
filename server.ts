@@ -12,6 +12,8 @@ import {
   SCOUT_REFILL_SIZE,
   STARTER_MARKET_SIZE,
   OPENING_MARKET_CARD_IDS,
+  OPENING_MAIN_CARD_IDS,
+  isStarterCardId,
   type Card,
   type EventCard,
   type Resource,
@@ -254,8 +256,14 @@ function seedOpeningMarket(room: Room) {
     const index = room.game.deck.indexOf(cardId)
     if (index >= 0) room.game.deck.splice(index, 1)
   }
+  for (const cardId of OPENING_MAIN_CARD_IDS) {
+    const index = room.game.deck.indexOf(cardId)
+    if (index >= 0) room.game.deck.splice(index, 1)
+  }
   room.game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
     if (index < STARTER_MARKET_SIZE) return OPENING_MARKET_CARD_IDS[index] ?? null
+    const openingMainCard = OPENING_MAIN_CARD_IDS[index - STARTER_MARKET_SIZE]
+    if (openingMainCard) return openingMainCard
     return room.game.deck.shift() ?? null
   })
 }
@@ -383,6 +391,7 @@ function buildCard(room: Room, player: Player, cardId: string) {
   if (!card) return 'Unknown card.'
   if (room.game.market.includes(cardId) === false) return 'That card is not in the market.'
   if (player.tableau.includes(cardId)) return 'You already built that card.'
+  if (card.starter && player.tableau.some(isStarterCardId)) return 'You already chose a START lane.'
 
   const cost = cardCost(room, card)
   if (!canPay(player, cost)) return 'Not enough resources.'
@@ -446,6 +455,7 @@ function botAct(room: Room) {
     .map((id) => id ? cardsById.get(id) : undefined)
     .filter((card): card is Card => Boolean(card))
     .filter((card) => !player.tableau.includes(card.id))
+    .filter((card) => !card.starter || !player.tableau.some(isStarterCardId))
     .filter((card) => canPay(player, cardCost(room, card)))
     .sort((a, b) => botCardValue(room, player, b) - botCardValue(room, player, a))
 

@@ -7,9 +7,11 @@ import {
   SCOUT_REFILL_SIZE,
   STARTER_MARKET_SIZE,
   OPENING_MARKET_CARD_IDS,
+  OPENING_MAIN_CARD_IDS,
   continuesAfterBuild,
   effectRules,
   effectiveCost,
+  isStarterCardId,
   productiveIncome,
   shockEventForCard,
   type Card,
@@ -24,6 +26,10 @@ type Strategy =
   | 'vp'
   | 'effects'
   | 'scout'
+  | 'moneyOnly'
+  | 'influenceOnly'
+  | 'computeOnly'
+  | 'energyOnly'
   | 'moneyCompute'
   | 'influenceEnergy'
   | 'computeEnergy'
@@ -154,6 +160,7 @@ function cost(card: Card, event?: EventCard): ResourceMap {
 
 function canPay(player: Player, card: Card, event?: EventCard) {
   if (player.tableau.includes(card.id)) return false
+  if (card.starter && player.tableau.some(isStarterCardId)) return false
   const cardCost = cost(card, event)
   return RESOURCES.every((resource) => player.budget[resource] >= cardCost[resource])
 }
@@ -186,8 +193,14 @@ function seedOpeningMarket(game: Game) {
     const index = game.deck.indexOf(cardId)
     if (index >= 0) game.deck.splice(index, 1)
   }
+  for (const cardId of OPENING_MAIN_CARD_IDS) {
+    const index = game.deck.indexOf(cardId)
+    if (index >= 0) game.deck.splice(index, 1)
+  }
   game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
     if (index < STARTER_MARKET_SIZE) return OPENING_MARKET_CARD_IDS[index] ?? null
+    const openingMainCard = OPENING_MAIN_CARD_IDS[index - STARTER_MARKET_SIZE]
+    if (openingMainCard) return openingMainCard
     return game.deck.shift() ?? null
   })
 }
@@ -210,6 +223,14 @@ function sumMap(values?: Partial<ResourceMap>) {
 
 function focusWeights(strategy: Strategy): Partial<Record<Resource, number>> {
   switch (strategy) {
+    case 'moneyOnly':
+      return { money: 3 }
+    case 'influenceOnly':
+      return { influence: 3 }
+    case 'computeOnly':
+      return { compute: 3 }
+    case 'energyOnly':
+      return { energy: 3 }
     case 'moneyCompute':
       return { money: 2, compute: 2 }
     case 'influenceEnergy':
@@ -265,6 +286,10 @@ function cardValue(card: Card, strategy: Strategy, round: number) {
       return base + effectValue * 2
     case 'scout':
       return base + (card.effect === 'shock' ? 8 : 0) + incomeValue
+    case 'moneyOnly':
+    case 'influenceOnly':
+    case 'computeOnly':
+    case 'energyOnly':
     case 'moneyCompute':
     case 'influenceEnergy':
     case 'computeEnergy':
@@ -331,6 +356,7 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
 function build(game: Game, players: Player[], player: Player, cardId: string, writeLog = true) {
   const card = cards.get(cardId)!
   if (player.tableau.includes(cardId)) return
+  if (card.starter && player.tableau.some(isStarterCardId)) return
   const cardCost = cost(card, game.event)
   for (const resource of RESOURCES) player.budget[resource] -= cardCost[resource]
   addBudget(player.incomeBuilt, productiveIncome(card))
@@ -598,6 +624,10 @@ function summarizeOptions(games: number) {
     'vp',
     'effects',
     'scout',
+    'moneyOnly',
+    'influenceOnly',
+    'computeOnly',
+    'energyOnly',
     'moneyCompute',
     'influenceEnergy',
     'computeEnergy',
@@ -1075,6 +1105,47 @@ function summarizeApexMirror(games: number) {
   }
 }
 
+function summarizeWinnerTableaus(games: number) {
+  const lineups: Strategy[][] = [
+    ['moneyOnly', 'computeOnly', 'energyOnly'],
+    ['moneyOnly', 'influenceOnly', 'computeOnly'],
+    ['influenceOnly', 'energyOnly', 'computeOnly'],
+    ['moneyOnly', 'influenceOnly', 'energyOnly'],
+  ]
+  const samples: Array<{ seed: number; strategy: Strategy; score: number; income: ResourceMap; cards: string[] }> = []
+  const wins = new Map<Strategy, number>()
+
+  for (let seed = 1; seed <= games; seed += 1) {
+    const lineup = lineups[(seed - 1) % lineups.length]
+    const { players } = play(seed, lineup)
+    const winner = [...players].sort((a, b) => b.score - a.score)[0]
+    wins.set(winner.strategy, (wins.get(winner.strategy) ?? 0) + 1)
+    if (samples.length < 16 || winner.score >= samples[samples.length - 1].score) {
+      samples.push({
+        seed,
+        strategy: winner.strategy,
+        score: winner.score,
+        income: winner.incomeBuilt,
+        cards: winner.tableau.map((id) => cards.get(id)?.name ?? id),
+      })
+      samples.sort((a, b) => b.score - a.score)
+      samples.splice(16)
+    }
+  }
+
+  console.log(`Simulated ${games} archetype games.`)
+  console.log('Wins by focus:')
+  for (const [strategy, count] of [...wins.entries()].sort((a, b) => b[1] - a[1])) {
+    console.log(`${strategy}: ${count}`)
+  }
+
+  console.log('\nHigh-scoring winner tableaus:')
+  for (const sample of samples.slice(0, 8)) {
+    console.log(`seed ${sample.seed}, ${sample.strategy}, ${sample.score} VP, income ${JSON.stringify(sample.income)}`)
+    console.log(`  ${sample.cards.join(' -> ')}`)
+  }
+}
+
 const mode = process.argv[2] ?? 'single'
 if (mode === 'batch') summarizeBatch(Number(process.argv[3] ?? 100))
 else if (mode === 'duel') summarizeDuelBatch(Number(process.argv[3] ?? 50))
@@ -1082,4 +1153,5 @@ else if (mode === 'cards') summarizeCardStats(Number(process.argv[3] ?? 1000))
 else if (mode === 'mirror') summarizeApexMirror(Number(process.argv[3] ?? 500))
 else if (mode === 'options') summarizeOptions(Number(process.argv[3] ?? 500))
 else if (mode === 'events') summarizeEventImpact(Number(process.argv[3] ?? 500))
+else if (mode === 'tableaus') summarizeWinnerTableaus(Number(process.argv[3] ?? 100))
 else summarizeSingle(Number(mode))

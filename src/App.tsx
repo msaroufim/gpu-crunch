@@ -20,6 +20,7 @@ import {
   cardRole,
   effectRules,
   effectiveCost,
+  isStarterCardId,
   productiveIncome,
   resourceLabels,
   roleHelp,
@@ -180,6 +181,7 @@ function adjustedCost(card: Card, event?: EventCard): ResourceMap {
 function canBuild(player: Player | undefined, card: Card, event?: EventCard) {
   if (!player) return false
   if (player.tableau.includes(card.id)) return false
+  if (card.starter && player.tableau.some(isStarterCardId)) return false
   const cost = adjustedCost(card, event)
   return RESOURCES.every((resource) => player.resources[resource] >= cost[resource])
 }
@@ -736,7 +738,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
           <section className="rules-box">
             <h2>Scoring</h2>
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
-            <p>You start at 0 resources. Phase 1 has no crisis so each player can take one START card or Scout.</p>
+            <p>You start at 0 resources. The four START cards are always available and each gives one clear resource lane.</p>
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 makes their printed cost harsher.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>

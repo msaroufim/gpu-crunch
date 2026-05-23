@@ -30,7 +30,7 @@ Players compete to build the strongest AI infrastructure tableau from a shared m
 
 ## Turn Structure
 
-The game lasts 8 phases.
+The game lasts 12 phases.
 
 At the start of each phase:
 
@@ -50,7 +50,7 @@ Players start with no tableau and 0 resources. The opening market is seeded with
 
 After the starter market, new cards enter only when Scout fills an empty supply slot from the normal deck order.
 
-Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
+Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals a 12-phase crisis queue by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
 Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`.
 Events can change costs, block suits, or reduce budgets, but they do not create starting resources. Resource access comes from built cards.

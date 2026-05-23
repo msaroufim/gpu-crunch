@@ -1,6 +1,7 @@
 import {
   CARDS,
   EVENTS,
+  GAME_PHASES,
   MARKET_SIZE,
   RESOURCES,
   OPENING_MARKET_CARD_IDS,
@@ -123,6 +124,13 @@ function weightedDeck(random: () => number) {
     deck.push(...late.splice(0, 1))
   }
   return deck
+}
+
+function makeEventDeck(random: () => number, count: number) {
+  const eventIds = EVENTS.map((event) => event.id)
+  const deck: string[] = []
+  while (deck.length < count) deck.push(...shuffle(eventIds, random))
+  return deck.slice(0, count)
 }
 
 function baseBudget(): ResourceMap {
@@ -411,7 +419,7 @@ function simulateToEnd(game: Game, players: Player[]) {
   while (guard < 500) {
     guard += 1
     if (players.every((player) => player.passed)) {
-      if (game.round >= 8) break
+      if (game.round >= GAME_PHASES) break
       startNextRound(game, players)
       continue
     }
@@ -477,7 +485,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
     deck: weightedDeck(random),
     market: [],
     discard: [],
-    events: shuffle(EVENTS.map((event) => event.id), random).slice(0, 8),
+    events: makeEventDeck(random, GAME_PHASES),
     active: 0,
     round: 0,
     log: [],
@@ -489,7 +497,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
   }
   seedOpeningMarket(game)
 
-  while (game.round < 8) {
+  while (game.round < GAME_PHASES) {
     startNextRound(game, players)
     game.log.push(`\nRound ${game.round}: ${game.event?.name} -- ${game.event?.rule}`)
 
@@ -580,7 +588,7 @@ function summarizeOptions(games: number) {
     'apex',
   ]
   const overall = emptyOptionBucket()
-  const byRound = Object.fromEntries(Array.from({ length: 8 }, (_, index) => [index + 1, emptyOptionBucket()])) as Record<number, OptionBucket>
+  const byRound = Object.fromEntries(Array.from({ length: GAME_PHASES }, (_, index) => [index + 1, emptyOptionBucket()])) as Record<number, OptionBucket>
   const byStrategy = Object.fromEntries(strategies.map((strategy) => [strategy, emptyOptionBucket()])) as Record<Strategy, OptionBucket>
 
   for (let seed = 1; seed <= games; seed += 1) {

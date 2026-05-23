@@ -55,6 +55,7 @@ export type EventCard = {
 export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
 export const TRACKS: Track[] = ['capacity', 'policy', 'grid', 'moat']
 export const MARKET_SIZE = 12
+export const GAME_PHASES = 12
 
 export const resourceLabels: Record<Resource, string> = {
   money: 'Money',

@@ -6,6 +6,7 @@ import { Server } from 'socket.io'
 import {
   CARDS,
   EVENTS,
+  GAME_PHASES,
   MARKET_SIZE,
   RESOURCES,
   OPENING_MARKET_CARD_IDS,
@@ -108,6 +109,13 @@ function weightedDeck() {
   return deck
 }
 
+function makeEventDeck(count: number) {
+  const eventIds = EVENTS.map((event) => event.id)
+  const deck: string[] = []
+  while (deck.length < count) deck.push(...shuffle(eventIds))
+  return deck.slice(0, count)
+}
+
 function startingResources(): ResourceMap {
   return { money: 0, influence: 0, compute: 0, energy: 0 }
 }
@@ -135,7 +143,7 @@ function newGame(): Game {
     id: `lobby-${Date.now()}-${gameSequence}`,
     status: 'lobby',
     round: 0,
-    maxRounds: 8,
+    maxRounds: GAME_PHASES,
     activePlayer: 0,
     deck: [],
     market: [],
@@ -300,12 +308,12 @@ function startGame(room: Room) {
     id: `${room.id}-${Date.now()}-${gameSequence += 1}`,
     status: 'playing',
     round: 0,
-    maxRounds: 8,
+    maxRounds: GAME_PHASES,
     activePlayer: 0,
     deck: weightedDeck(),
     market: [],
     discard: [],
-    eventDeck: shuffle(EVENTS.map((event) => event.id)).slice(0, 8),
+    eventDeck: makeEventDeck(GAME_PHASES),
     event: null,
     priorityPlayerId: null,
     log: [],

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import {
   CARDS,
+  EVENTS,
   RESOURCES,
   cardRole,
   effectRules,
@@ -22,6 +23,7 @@ import {
   productiveIncome,
   resourceLabels,
   roleHelp,
+  shockEventForCard,
   type Card,
   type EventCard,
   type Resource,
@@ -190,6 +192,10 @@ function CardView({
 }) {
   const affordable = owner ? canBuild(owner, card, event) : true
   const effect = card.effect ? effectRules[card.effect] : undefined
+  const forcedEvent = card.effect === 'shock'
+    ? EVENTS.find((candidate) => candidate.id === shockEventForCard(card))
+    : undefined
+  const effectText = forcedEvent ? `${effect?.text} Forces: ${forcedEvent.name}.` : effect?.text
 
   return (
     <article className={`game-card tier-${card.tier} ${compact ? 'compact' : ''} ${highlighted ? 'market-choice' : ''} art-${card.art}`}>
@@ -218,7 +224,7 @@ function CardView({
           <div className="special-box">
             <span>Buff</span>
             <b>{effect ? effect.name : 'No special action'}</b>
-            <em>{effect ? effect.text : `Income: ${mapText(productiveIncome(card), resourceLabels)}`}</em>
+            <em>{effectText ?? `Income: ${mapText(productiveIncome(card), resourceLabels)}`}</em>
           </div>
         </>
       )}

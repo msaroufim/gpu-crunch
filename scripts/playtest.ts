@@ -6,6 +6,7 @@ import {
   effectRules,
   effectiveCost,
   productiveIncome,
+  shockEventForCard,
   type Card,
   type EventCard,
   type Resource,
@@ -289,11 +290,12 @@ function sharkCardValue(game: Game, players: Player[], player: Player, card: Car
   const leader = leaderTarget(players, player)
   const leaderBestCard = leader ? highestVpTableauCard(leader) : undefined
   const leaderBest = leaderBestCard ? cards.get(leaderBestCard)!.vp : 0
+  const forcedEvent = card.effect === 'shock' ? events.get(shockEventForCard(card)) : undefined
   const effectValue =
     card.effect === 'shield' ? 6 + card.vp * 2 :
     card.effect === 'decoy' ? 6 + card.vp :
     card.effect === 'priority' ? 6 + (game.round <= 5 ? 3 : 0) :
-    card.effect === 'shock' ? 8 + sumMap(game.event?.costMod) :
+    card.effect === 'shock' ? 8 + sumMap(forcedEvent?.costMod) + sumMap(forcedEvent?.incomeMod) :
     card.effect === 'seize' ? 9 + leaderBest * 5 :
     card.effect === 'destroy' ? (leaderBest ? 7 + leaderBest * 4 : disruptTarget && disruptTarget.id !== card.id ? 5 + disruptTarget.vp * 3 : 2) :
     0
@@ -324,8 +326,7 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
       player.initiative = true
       break
     case 'shock': {
-      const nextEvent = game.events.shift()
-      if (nextEvent) game.event = events.get(nextEvent)
+      game.event = events.get(shockEventForCard(card))
       break
     }
     case 'seize': {

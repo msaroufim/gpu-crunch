@@ -16,6 +16,7 @@ import {
   emptyTracks,
   effectiveCost,
   productiveIncome,
+  shockEventForCard,
 } from './src/game.js'
 
 type Player = {
@@ -347,14 +348,10 @@ function applyEffect(room: Room, player: Player, card: Card) {
       log(room, `${player.name} took next-phase initiative with ${card.name}.`)
       break
     case 'shock': {
-      const nextEventId = room.game.eventDeck.shift()
-      if (!nextEventId) {
-        log(room, `${player.name} tried to push the event deck, but no event was left.`)
-        break
-      }
-      room.game.event = nextEventId
-      const event = eventsById.get(nextEventId)
-      log(room, `${player.name} pushed the table into ${event?.name ?? 'a new event'}.`)
+      const forcedEventId = shockEventForCard(card)
+      room.game.event = forcedEventId
+      const event = eventsById.get(forcedEventId)
+      log(room, `${player.name} replaced the event with ${event?.name ?? 'a forced event'}.`)
       break
     }
     case 'seize': {

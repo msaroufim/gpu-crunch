@@ -76,7 +76,7 @@ export const effectRules: Record<EffectId, { name: string; text: string; broken?
   shield: { name: 'Shield', text: 'Local buff: this card cannot be seized or destroyed.', broken: true },
   decoy: { name: 'Decoy', text: 'Local buff: rivals must seize or destroy this before your other vulnerable cards.', broken: true },
   priority: { name: 'Priority', text: 'Local buff: take initiative next phase.', broken: true },
-  shock: { name: 'Shock', text: 'Global debuff: replace the current event with the next event in the deck.', broken: true },
+  shock: { name: 'Shock', text: "Global debuff: replace the current event with this card's forced event.", broken: true },
   seize: { name: 'Seize', text: "Take the highest-VP card from the current leader's tableau.", broken: true },
   destroy: { name: 'Destroy', text: "Trash the highest-VP card from the current leader's tableau. If none, trash the highest-VP market card.", broken: true },
 }
@@ -249,3 +249,23 @@ export const EVENTS: EventCard[] = [
   { id: 'power-price-spike', name: 'Power Price Spike', headline: 'The marginal megawatt gets ugly.', rule: 'Energy budget -1.', incomeMod: { energy: -1 } },
   { id: 'panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Gain +1 Money and +1 Compute.', incomeMod: { money: 1, compute: 1 } },
 ]
+
+const shockEventByCardId: Record<string, string> = {
+  'euv-queue': 'asml-credential-leak',
+  'jensen-soju-toast': 'hbm-sold-out',
+  'sovereign-ai-mou': 'china-sales-window',
+  'export-license-counsel': 'tariff-whiplash',
+  'data-center-rezoning': 'power-price-spike',
+  'nuclear-ppa': 'power-price-spike',
+  'benchmark-leak': 'panic-order',
+  'customs-waiver': 'tariff-whiplash',
+  'silicon-photonics-bet': 'compiler-zero-day',
+  'government-supercluster': 'panic-order',
+  'carbon-credit-swap': 'power-price-spike',
+  'heat-reuse-district': 'power-price-spike',
+  'open-source-compiler': 'compiler-zero-day',
+  'boardroom-pivot': 'panic-order',
+}
+
+export const shockEventForCard = (card: Card) =>
+  shockEventByCardId[card.id] ?? 'tariff-whiplash'

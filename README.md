@@ -79,7 +79,7 @@ Every card belongs to one of a few clear effect families:
 - Shield: local buff that protects that card from Seize and Destroy.
 - Decoy: local buff that forces Seize and Destroy to hit that card before your other vulnerable cards.
 - Priority: local buff that gives you initiative next phase.
-- Shock: global debuff manipulation that pushes the table into the next event.
+- Shock: global debuff manipulation that replaces the current event with that card's forced event.
 - Seize: take the highest-VP card from the current leader's tableau.
 - Destroy: trash the highest-VP card from the current leader's tableau, or from the market if no leader has cards.
 
@@ -99,7 +99,7 @@ Cards show a lightweight role tag to make the deck easier to scan:
 
 - Decoy -> Finisher: build a Decoy before a big VP card so Seize and Destroy hit the decoy first.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
-- Shock -> Bad Window: build first, then push the table into a worse event for everyone still waiting.
+- Shock -> Bad Window: build first, then replace the current event with a card-specific crisis for everyone still waiting.
 - Seize/Destroy -> Naked Leader: punish a player who built points without Shield or Decoy cover.
 
 ## Current Card Themes

@@ -77,6 +77,8 @@ On your turn, choose one:
 - Build one card from the common market.
 - Scout: fill every empty market slot from the deck. If the Priority Card is unclaimed this phase, take it.
 
+Scout only when you hate every build or need Priority. Most turns should build a card.
+
 Most builds end your turn for the phase.
 
 If no one owns the Priority Card, the next phase starts by normal seat rotation.

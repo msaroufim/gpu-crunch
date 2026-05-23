@@ -109,14 +109,6 @@ function useSocket() {
   return socket
 }
 
-function mapText<T extends string>(map?: Partial<Record<T, number>>, labels?: Record<T, string>) {
-  if (!map) return 'None'
-  const parts = Object.entries(map)
-    .filter(([, value]) => Number(value) !== 0)
-    .map(([key, value]) => `${Number(value) > 0 ? '+' : ''}${value} ${labels?.[key as T] ?? key}`)
-  return parts.length ? parts.join('  ') : 'None'
-}
-
 function focusText(player: Player) {
   return player.focus?.map((resource) => resourceLabels[resource]).join(' + ')
 }
@@ -228,14 +220,12 @@ function CardView({
       <div className="role-chip" title={roleHelp[cardRole(card)]}>{cardRole(card)}</div>
       <h3>{card.name}</h3>
       {!compact && <p>{card.flavor}</p>}
-      {!compact && (
-        <>
-          <div className="special-box">
-            <span>Buff</span>
-            <b>{effect ? effect.name : 'No special action'}</b>
-            <em>{effectText ?? `Income: ${mapText(productiveIncome(card), resourceLabels)}`}</em>
-          </div>
-        </>
+      {!compact && effect && (
+        <div className="special-box">
+          <span>Buff</span>
+          <b>{effect.name}</b>
+          <em>{effectText}</em>
+        </div>
       )}
       {onBuild && (
         <button type="button" className="build-button" disabled={disabled || (requiresAffordable && !affordable)} onClick={onBuild}>

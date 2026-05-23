@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-crunch
+  namespace: ml
+  labels:
+    app.kubernetes.io/name: gpu-crunch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gpu-crunch
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gpu-crunch
+    spec:
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: gpu-crunch
+          image: node:22-bookworm-slim
+          imagePullPolicy: IfNotPresent
+          workingDir: /mnt/home/mark/games/gpu-crunch
+          command:
+            - bash
+            - -lc
+            - |
+              set -euo pipefail
+              npm ci
+              npm run build
+              PORT=3001 npm start
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: home
+              mountPath: /mnt/home
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: c1-home
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gpu-crunch
+  namespace: ml
+  labels:
+    app.kubernetes.io/name: gpu-crunch
+  annotations:
+    tailscale.com/hostname: gpu-crunch
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: gpu-crunch
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

@@ -70,6 +70,12 @@ const rooms = new Map<string, Room>()
 const cardsById = new Map(CARDS.map((card) => [card.id, card]))
 const eventsById = new Map(EVENTS.map((event) => [event.id, event]))
 const DEFAULT_ROOM_ID = 'POC'
+const DEFAULT_HUMAN_NAME = 'Green GPU Co.'
+const DEFAULT_SEATS = [
+  { name: 'Green GPU Co.' },
+  { name: 'Red GPU Co.', botName: 'Red Accelerators', focus: ['money', 'compute'] as Resource[] },
+  { name: 'Blue GPU Co.', botName: 'Blue Silicon', focus: ['influence', 'energy'] as Resource[] },
+]
 let gameSequence = 0
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -136,6 +142,11 @@ function freshPlayer(id: string, name: string, isBot = false, focus?: Resource[]
     cardsBuilt: 0,
     score: 0,
   }
+}
+
+function displayName(name: string | undefined, fallback: string) {
+  const trimmed = name?.trim().slice(0, 18)
+  return trimmed && trimmed !== DEFAULT_HUMAN_NAME ? trimmed : fallback
 }
 
 function newGame(): Game {
@@ -451,13 +462,18 @@ io.on('connection', (socket) => {
   socket.on('joinDefault', ({ name }: { name: string }, ack) => {
     const existingRoom = rooms.get(DEFAULT_ROOM_ID)
     if (existingRoom) {
-      const human = existingRoom.players.find((player) => !player.isBot)
-      if (human) {
-        const previousId = human.id
-        human.id = socket.id
-        human.name = name?.trim().slice(0, 18) || human.name
-        if (existingRoom.game.priorityPlayerId === previousId) existingRoom.game.priorityPlayerId = socket.id
-      }
+      const alreadyJoined = existingRoom.players.find((player) => player.id === socket.id)
+      const openSeat = alreadyJoined ?? existingRoom.players.find((player) => player.isBot)
+      if (!openSeat) return ack?.({ error: 'Sorry, game is full. Please holler if you want to play.' })
+
+      const previousId = openSeat.id
+      const seatIndex = existingRoom.players.indexOf(openSeat)
+      const seat = DEFAULT_SEATS[seatIndex] ?? DEFAULT_SEATS[0]
+      openSeat.id = socket.id
+      openSeat.name = displayName(name, seat.name)
+      openSeat.isBot = false
+      openSeat.focus = undefined
+      if (existingRoom.game.priorityPlayerId === previousId) existingRoom.game.priorityPlayerId = socket.id
       existingRoom.hostId = socket.id
       socket.join(DEFAULT_ROOM_ID)
       ack?.(view(existingRoom))
@@ -469,9 +485,9 @@ io.on('connection', (socket) => {
       id: DEFAULT_ROOM_ID,
       hostId: socket.id,
       players: [
-        freshPlayer(socket.id, name || 'Green GPU Co.'),
-        freshPlayer('bot-red-accelerators', 'Red Accelerators', true, ['money', 'compute']),
-        freshPlayer('bot-blue-silicon', 'Blue Silicon', true, ['influence', 'energy']),
+        freshPlayer(socket.id, displayName(name, DEFAULT_SEATS[0].name)),
+        freshPlayer('bot-red-accelerators', DEFAULT_SEATS[1].botName, true, DEFAULT_SEATS[1].focus),
+        freshPlayer('bot-blue-silicon', DEFAULT_SEATS[2].botName, true, DEFAULT_SEATS[2].focus),
       ],
       game: newGame(),
     }
@@ -548,7 +564,23 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     for (const room of rooms.values()) {
       const player = room.players.find((p) => p.id === socket.id)
-      if (!player || room.game.status !== 'lobby') continue
+      if (!player) continue
+
+      if (room.id === DEFAULT_ROOM_ID && room.game.status !== 'lobby') {
+        const seatIndex = room.players.indexOf(player)
+        const seat = DEFAULT_SEATS[seatIndex]
+        if (!seat) continue
+        player.id = `bot-${seat.name.toLowerCase().replaceAll(' ', '-')}-${Date.now()}`
+        player.name = seat.botName ?? seat.name
+        player.isBot = true
+        player.focus = seat.focus
+        if (room.hostId === socket.id) room.hostId = room.players.find((p) => !p.isBot)?.id ?? player.id
+        if (room.players[room.game.activePlayer]?.id === player.id) botAct(room)
+        broadcast(room)
+        continue
+      }
+
+      if (room.game.status !== 'lobby') continue
       room.players = room.players.filter((p) => p.id !== socket.id)
       if (room.players.length === 0) rooms.delete(room.id)
       else {

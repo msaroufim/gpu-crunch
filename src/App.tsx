@@ -788,7 +788,11 @@ function App() {
       joinedSocketId.current = socket.id
       const name = localStorage.getItem('gpu-game-name') ?? 'Green GPU Co.'
       socket.emit('joinDefault', { name }, (reply: Room | { error: string }) => {
-        if (!('error' in reply)) setRoom(reply)
+        if ('error' in reply) {
+          setNotice(reply.error)
+          return
+        }
+        setRoom(reply)
       })
     }
     const resetJoin = () => {

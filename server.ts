@@ -42,6 +42,7 @@ type Game = {
   discard: string[]
   eventDeck: string[]
   event: string | null
+  priorityPlayerId: string | null
   log: string[]
 }
 
@@ -130,6 +131,7 @@ function newGame(): Game {
     discard: [],
     eventDeck: [],
     event: null,
+    priorityPlayerId: null,
     log: ['Room created. Add players, then start the first supply phase.'],
   }
 }
@@ -152,6 +154,14 @@ function log(room: Room, line: string) {
 
 function currentEvent(room: Room): EventCard | undefined {
   return room.game.event ? eventsById.get(room.game.event) : undefined
+}
+
+function claimPriority(room: Room, player: Player) {
+  room.players.forEach((candidate) => {
+    candidate.initiative = false
+  })
+  player.initiative = true
+  room.game.priorityPlayerId = player.id
 }
 
 function cardCost(room: Room, card: Card): ResourceMap {
@@ -286,11 +296,14 @@ function startRound(room: Room) {
     player.passed = false
     player.resources = phaseBudget(player, event)
   })
-  const initiativeIndex = room.players.findIndex((player) => player.initiative)
+  const initiativeIndex = room.game.priorityPlayerId
+    ? room.players.findIndex((player) => player.id === room.game.priorityPlayerId)
+    : -1
   game.activePlayer = initiativeIndex >= 0 ? initiativeIndex : (game.round - 1) % room.players.length
   room.players.forEach((player) => {
     player.initiative = false
   })
+  game.priorityPlayerId = null
   log(room, `Phase ${game.round}: ${event?.name ?? 'Open Market'} is active.`)
 }
 
@@ -313,6 +326,7 @@ function startGame(room: Room) {
     discard: [],
     eventDeck: shuffle(EVENTS.map((event) => event.id)).slice(0, 8),
     event: null,
+    priorityPlayerId: null,
     log: [],
   }
   seedOpeningMarket(room)
@@ -344,7 +358,7 @@ function applyEffect(room: Room, player: Player, card: Card) {
       log(room, `${player.name} made ${card.name} the first target for rival Seize and Destroy effects.`)
       break
     case 'priority':
-      player.initiative = true
+      claimPriority(room, player)
       log(room, `${player.name} took next-phase initiative with ${card.name}.`)
       break
     case 'shock': {
@@ -405,7 +419,7 @@ function buildCard(room: Room, player: Player, cardId: string) {
 
 function startScout(room: Room, player: Player) {
   const removed = cycleMarketCards(room, room.game.market.slice(0, 2))
-  player.initiative = true
+  claimPriority(room, player)
   player.passed = true
   log(room, `${player.name} scouted the market, cycled ${removed.length} cards, and took next-phase initiative.`)
   nextActive(room)

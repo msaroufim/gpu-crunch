@@ -38,6 +38,7 @@ At the start of each phase:
 - Reset each player's temporary budget.
 - Budget equals base resources plus income icons from built cards, modified by the event.
 - Unspent resources from prior phases are gone.
+- The Priority Card owner acts first, then the card becomes unclaimed.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
@@ -46,9 +47,11 @@ Some dramatic events lock an entire card suit for one phase, such as `Foundry Lo
 On your turn, choose one:
 
 - Build one card from the common market.
-- Scout: cycle the two leftmost market cards and take initiative next phase.
+- Scout: cycle the two leftmost market cards and take the Priority Card.
 
 Most builds end your turn for the phase.
+
+If no one owns the Priority Card, the next phase starts by normal seat rotation.
 
 When a card is built:
 
@@ -78,7 +81,7 @@ Every card belongs to one of a few clear effect families:
 
 - Shield: local buff that protects that card from Seize and Destroy.
 - Decoy: local buff that forces Seize and Destroy to hit that card before your other vulnerable cards.
-- Priority: local buff that gives you initiative next phase.
+- Priority: local buff that gives you the Priority Card. Its owner acts first next phase.
 - Shock: global debuff manipulation that replaces the current event with that card's forced event.
 - Seize: take the highest-VP card from the current leader's tableau.
 - Destroy: trash the highest-VP card from the current leader's tableau, or from the market if no leader has cards.

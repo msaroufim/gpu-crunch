@@ -55,6 +55,7 @@ type Game = {
   discard: string[]
   eventDeck: string[]
   event: string | null
+  priorityPlayerId: string | null
   log: string[]
 }
 
@@ -252,6 +253,7 @@ function PlayerPanel({ player, active, you, seat }: { player: Player; active: bo
         </strong>
         {active && <Hourglass size={16} />}
       </div>
+      {player.initiative && <div className="priority-badge">Holds Priority Card</div>}
       {player.focus?.length ? <p className="focus-label">{focusText(player)}</p> : null}
       <div className="resource-grid">
         {RESOURCES.map((resource) => (
@@ -264,6 +266,19 @@ function PlayerPanel({ player, active, you, seat }: { player: Player; active: bo
           return card ? <span key={cardId}>{card.name}</span> : null
         })}
       </div>
+    </section>
+  )
+}
+
+function PriorityCard({ owner }: { owner?: Player }) {
+  return (
+    <section className={`priority-card ${owner ? 'claimed' : ''}`}>
+      <div className="priority-card-top">
+        <span>Turn Order</span>
+        <Hourglass size={16} />
+      </div>
+      <h2>Priority Card</h2>
+      <p>{owner ? `${owner.name} acts first next phase.` : 'Unclaimed. Next phase starts by seat rotation.'}</p>
     </section>
   )
 }
@@ -449,6 +464,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
   const events = useMemo(() => new Map(room.events.map((event) => [event.id, event])), [room.events])
   const event = room.game.event ? events.get(room.game.event) : undefined
   const activePlayer = room.players[room.game.activePlayer]
+  const priorityOwner = room.players.find((player) => player.id === room.game.priorityPlayerId)
   const you = room.players.find((player) => player.id === socket?.id)
   const opponents = room.players.filter((player) => player.id !== socket?.id)
   const yourTurn = Boolean(you && activePlayer?.id === you.id && room.game.status === 'playing')
@@ -480,6 +496,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
 
       <div className="board-layout">
         <aside className="left-rail">
+          <PriorityCard owner={priorityOwner} />
           {room.players.map((player, index) => (
             <PlayerPanel
               key={player.id}

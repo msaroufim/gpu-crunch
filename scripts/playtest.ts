@@ -49,6 +49,7 @@ type Game = {
   active: number
   round: number
   log: string[]
+  priorityPlayer?: string
   playableCounts: number[]
   effectBuilds: number
   scouts: number
@@ -57,6 +58,14 @@ type Game = {
 
 const cards = new Map(CARDS.map((card) => [card.id, card]))
 const events = new Map(EVENTS.map((event) => [event.id, event]))
+
+function claimPriority(game: Game, players: Player[], player: Player) {
+  players.forEach((candidate) => {
+    candidate.initiative = false
+  })
+  player.initiative = true
+  game.priorityPlayer = player.name
+}
 const learnedPower: Partial<Record<string, number>> = {
   'grace-cpu-bundle': 30,
   'inference-optimization': 28,
@@ -323,7 +332,7 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
     case 'decoy':
       break
     case 'priority':
-      player.initiative = true
+      claimPriority(game, players, player)
       break
     case 'shock': {
       game.event = events.get(shockEventForCard(card))
@@ -370,10 +379,10 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
   return card
 }
 
-function scout(game: Game, player: Player) {
+function scout(game: Game, players: Player[], player: Player) {
   cycleMarketCards(game, game.market.slice(0, 2))
   player.passed = true
-  player.initiative = true
+  claimPriority(game, players, player)
   player.scouts += 1
   game.scouts += 1
   game.log.push(`${player.name} (${player.strategy}) scouts and cycles the market.`)
@@ -398,6 +407,7 @@ function cloneGame(game: Game): Game {
     active: game.active,
     round: game.round,
     log: [],
+    priorityPlayer: game.priorityPlayer,
     playableCounts: [],
     effectBuilds: game.effectBuilds,
     scouts: game.scouts,
@@ -428,11 +438,14 @@ function startNextRound(game: Game, players: Player[]) {
     player.passed = false
     resetBudget(game, player)
   })
-  const initiative = players.findIndex((player) => player.initiative)
+  const initiative = game.priorityPlayer
+    ? players.findIndex((player) => player.name === game.priorityPlayer)
+    : -1
   game.active = initiative >= 0 ? initiative : (game.round - 1) % players.length
   players.forEach((player) => {
     player.initiative = false
   })
+  game.priorityPlayer = undefined
 }
 
 function rolloutBuild(game: Game, players: Player[], player: Player, playable: Card[]) {
@@ -453,7 +466,7 @@ function simulateToEnd(game: Game, players: Player[]) {
     const player = players[game.active]
     const playable = game.market.map((id) => cards.get(id)!).filter((card) => canPay(player, card, game.event))
     if (playable.length === 0) {
-      scout(game, player)
+      scout(game, players, player)
       nextActive(game, players)
     } else {
       rolloutBuild(game, players, player, playable)
@@ -531,7 +544,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
       const playable = game.market.map((id) => cards.get(id)!).filter((card) => canPay(player, card, game.event))
       game.playableCounts.push(playable.length)
       if (shouldScout(player, playable, game.round)) {
-        scout(game, player)
+        scout(game, players, player)
       } else {
         const best = chooseBuild(game, players, player, playable)
         const built = build(game, players, player, best.id)

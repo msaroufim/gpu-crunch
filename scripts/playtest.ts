@@ -189,9 +189,9 @@ function leaderTarget(players: Player[], player: Player) {
 }
 
 function highestVpTableauCard(player: Player) {
-  return [...player.tableau]
-    .filter((cardId) => cards.get(cardId)!.effect !== 'shield')
-    .sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
+  const targetable = [...player.tableau].filter((cardId) => cards.get(cardId)!.effect !== 'shield')
+  const decoys = targetable.filter((cardId) => cards.get(cardId)!.effect === 'decoy')
+  return (decoys.length ? decoys : targetable).sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -240,7 +240,7 @@ function focusValue(card: Card, strategy: Strategy, round: number) {
 function cardValue(card: Card, strategy: Strategy, round: number) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ shield: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
+    ? ({ shield: 8, decoy: 7, priority: 7, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
     : 0
   const earlyIncome = round <= 4 ? incomeValue * 5 : incomeValue * 2
   const lateVp = round >= 7 ? card.vp * 7 : card.vp * 4
@@ -291,6 +291,8 @@ function sharkCardValue(game: Game, players: Player[], player: Player, card: Car
   const leaderBest = leaderBestCard ? cards.get(leaderBestCard)!.vp : 0
   const effectValue =
     card.effect === 'shield' ? 6 + card.vp * 2 :
+    card.effect === 'decoy' ? 6 + card.vp :
+    card.effect === 'priority' ? 6 + (game.round <= 5 ? 3 : 0) :
     card.effect === 'shock' ? 8 + sumMap(game.event?.costMod) :
     card.effect === 'seize' ? 9 + leaderBest * 5 :
     card.effect === 'destroy' ? (leaderBest ? 7 + leaderBest * 4 : disruptTarget && disruptTarget.id !== card.id ? 5 + disruptTarget.vp * 3 : 2) :
@@ -315,6 +317,11 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
   player.effectBuilds += 1
   switch (card.effect) {
     case 'shield':
+      break
+    case 'decoy':
+      break
+    case 'priority':
+      player.initiative = true
       break
     case 'shock': {
       const nextEvent = game.events.shift()

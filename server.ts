@@ -191,7 +191,7 @@ function botFocusValue(player: Player, card: Card) {
 function botCardValue(room: Room, player: Player, card: Card) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ shield: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
+    ? ({ shield: 8, decoy: 7, priority: 7, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
     : 0
   const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
 
@@ -255,8 +255,9 @@ function leaderTarget(room: Room, player: Player) {
 }
 
 function highestVpTableauCard(player: Player) {
-  return [...player.tableau]
-    .filter((cardId) => cardsById.get(cardId)?.effect !== 'shield')
+  const targetable = [...player.tableau].filter((cardId) => cardsById.get(cardId)?.effect !== 'shield')
+  const decoys = targetable.filter((cardId) => cardsById.get(cardId)?.effect === 'decoy')
+  return (decoys.length ? decoys : targetable)
     .sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
 }
 
@@ -337,6 +338,13 @@ function applyEffect(room: Room, player: Player, card: Card) {
   switch (card.effect) {
     case 'shield':
       log(room, `${player.name} shielded ${card.name} from Seize and Destroy.`)
+      break
+    case 'decoy':
+      log(room, `${player.name} made ${card.name} the first target for rival Seize and Destroy effects.`)
+      break
+    case 'priority':
+      player.initiative = true
+      log(room, `${player.name} took next-phase initiative with ${card.name}.`)
       break
     case 'shock': {
       const nextEventId = room.game.eventDeck.shift()

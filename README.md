@@ -83,6 +83,7 @@ Every card belongs to one of a few clear effect families:
 - Shock: global debuff manipulation that replaces the current event with that card's forced event.
 
 There is no stealing or deleting built cards. Interaction comes from racing the public market, taking Priority, and forcing event windows.
+Priority cards pay an extra 3 Money and 1 Influence because acting first can create back-to-back tempo.
 
 ## Card Roles
 

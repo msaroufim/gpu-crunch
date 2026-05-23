@@ -128,9 +128,11 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
     const eventMod = event?.costMod?.[resource] ?? 0
     const premium = resource === 'money' ? moneyVpPremium : resource === 'compute' ? computeVpPremium : 0
     const effectPremium =
-      card.effect === 'shock' && resource === 'influence'
-        ? 1
-        : 0
+      card.effect === 'priority'
+        ? resource === 'money' ? 3 : resource === 'influence' ? 1 : 0
+        : card.effect === 'shock' && resource === 'influence'
+          ? 1
+          : 0
     cost[resource] = Math.max(0, (card.cost[resource] ?? 0) + eventMod + premium + effectPremium)
   }
   return cost

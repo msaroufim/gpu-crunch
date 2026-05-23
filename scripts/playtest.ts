@@ -184,12 +184,14 @@ function tableauVp(player: Player) {
 
 function leaderTarget(players: Player[], player: Player) {
   return [...players]
-    .filter((candidate) => candidate !== player && candidate.tableau.length > 0)
+    .filter((candidate) => candidate !== player && candidate.tableau.some((cardId) => cards.get(cardId)!.effect !== 'shield'))
     .sort((a, b) => tableauVp(b) - tableauVp(a))[0]
 }
 
 function highestVpTableauCard(player: Player) {
-  return [...player.tableau].sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
+  return [...player.tableau]
+    .filter((cardId) => cards.get(cardId)!.effect !== 'shield')
+    .sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -238,7 +240,7 @@ function focusValue(card: Card, strategy: Strategy, round: number) {
 function cardValue(card: Card, strategy: Strategy, round: number) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ boost: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
+    ? ({ shield: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
     : 0
   const earlyIncome = round <= 4 ? incomeValue * 5 : incomeValue * 2
   const lateVp = round >= 7 ? card.vp * 7 : card.vp * 4
@@ -284,14 +286,11 @@ function sharkCardValue(game: Game, players: Player[], player: Player, card: Car
   const denial = nextOpponent && canPay(nextOpponent, card, game.event) ? card.vp * 6 + sumMap(productiveIncome(card)) * Math.min(remaining, 3) : 0
   const highMarket = highestVpMarketCard(game)
   const disruptTarget = highMarket ? cards.get(highMarket)! : undefined
-  const leader = [...players]
-    .filter((rival) => rival !== player && rival.tableau.length > 0)
-    .sort((a, b) => b.tableau.reduce((sum, id) => sum + cards.get(id)!.vp, 0) - a.tableau.reduce((sum, id) => sum + cards.get(id)!.vp, 0))[0]
-  const leaderBest = leader
-    ? Math.max(...leader.tableau.map((id) => cards.get(id)!.vp))
-    : 0
+  const leader = leaderTarget(players, player)
+  const leaderBestCard = leader ? highestVpTableauCard(leader) : undefined
+  const leaderBest = leaderBestCard ? cards.get(leaderBestCard)!.vp : 0
   const effectValue =
-    card.effect === 'boost' ? 8 + incomeValue * 0.5 :
+    card.effect === 'shield' ? 6 + card.vp * 2 :
     card.effect === 'shock' ? 8 + sumMap(game.event?.costMod) :
     card.effect === 'seize' ? 9 + leaderBest * 5 :
     card.effect === 'destroy' ? (leaderBest ? 7 + leaderBest * 4 : disruptTarget && disruptTarget.id !== card.id ? 5 + disruptTarget.vp * 3 : 2) :
@@ -315,7 +314,7 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
   game.effectBuilds += 1
   player.effectBuilds += 1
   switch (card.effect) {
-    case 'boost':
+    case 'shield':
       break
     case 'shock': {
       const nextEvent = game.events.shift()

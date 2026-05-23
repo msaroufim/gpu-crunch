@@ -76,7 +76,7 @@ Printed resource bonuses on cards below 3 VP count as income icons. They refresh
 
 Every card belongs to one of four effect families:
 
-- Boost: local buff that doubles that card's income icons.
+- Shield: local buff that protects that card from Seize and Destroy.
 - Shock: global debuff manipulation that pushes the table into the next event.
 - Seize: take the highest-VP card from the current leader's tableau.
 - Destroy: trash the highest-VP card from the current leader's tableau, or from the market if no leader has cards.

@@ -191,7 +191,7 @@ function botFocusValue(player: Player, card: Card) {
 function botCardValue(room: Room, player: Player, card: Card) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ boost: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
+    ? ({ shield: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
     : 0
   const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
 
@@ -250,12 +250,14 @@ function tableauVp(player: Player) {
 
 function leaderTarget(room: Room, player: Player) {
   return [...room.players]
-    .filter((candidate) => candidate.id !== player.id && candidate.tableau.length > 0)
+    .filter((candidate) => candidate.id !== player.id && candidate.tableau.some((cardId) => cardsById.get(cardId)?.effect !== 'shield'))
     .sort((a, b) => tableauVp(b) - tableauVp(a))[0]
 }
 
 function highestVpTableauCard(player: Player) {
-  return [...player.tableau].sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
+  return [...player.tableau]
+    .filter((cardId) => cardsById.get(cardId)?.effect !== 'shield')
+    .sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -333,8 +335,8 @@ function nextActive(room: Room) {
 
 function applyEffect(room: Room, player: Player, card: Card) {
   switch (card.effect) {
-    case 'boost':
-      log(room, `${player.name} doubled ${card.name}'s income output.`)
+    case 'shield':
+      log(room, `${player.name} shielded ${card.name} from Seize and Destroy.`)
       break
     case 'shock': {
       const nextEventId = room.game.eventDeck.shift()

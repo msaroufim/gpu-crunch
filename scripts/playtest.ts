@@ -184,26 +184,6 @@ function cycleMarketCards(game: Game, cardIds: string[]) {
   return removed
 }
 
-function highestVpMarketCard(game: Game) {
-  return [...game.market].sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
-}
-
-function tableauVp(player: Player) {
-  return player.tableau.reduce((sum, cardId) => sum + cards.get(cardId)!.vp, 0)
-}
-
-function leaderTarget(players: Player[], player: Player) {
-  return [...players]
-    .filter((candidate) => candidate !== player && candidate.tableau.some((cardId) => cards.get(cardId)!.effect !== 'shield'))
-    .sort((a, b) => tableauVp(b) - tableauVp(a))[0]
-}
-
-function highestVpTableauCard(player: Player) {
-  const targetable = [...player.tableau].filter((cardId) => cards.get(cardId)!.effect !== 'shield')
-  const decoys = targetable.filter((cardId) => cards.get(cardId)!.effect === 'decoy')
-  return (decoys.length ? decoys : targetable).sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
-}
-
 function sumMap(values?: Partial<ResourceMap>) {
   return Object.values(values ?? {}).reduce((sum, value) => sum + value, 0)
 }
@@ -250,7 +230,7 @@ function focusValue(card: Card, strategy: Strategy, round: number) {
 function cardValue(card: Card, strategy: Strategy, round: number) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ shield: 8, decoy: 7, priority: 7, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
+    ? ({ shield: 8, priority: 7, shock: 9 } as Record<string, number>)[card.effect]
     : 0
   const earlyIncome = round <= 4 ? incomeValue * 5 : incomeValue * 2
   const lateVp = round >= 7 ? card.vp * 7 : card.vp * 4
@@ -294,19 +274,11 @@ function sharkCardValue(game: Game, players: Player[], player: Player, card: Car
   const vpValue = card.vp * (game.round >= 5 ? 18 : 10) + card.vp * card.vp * 2 + (card.vp >= 3 ? 8 : 0)
   const nextOpponent = players[(players.indexOf(player) + 1) % players.length]
   const denial = nextOpponent && canPay(nextOpponent, card, game.event) ? card.vp * 6 + sumMap(productiveIncome(card)) * Math.min(remaining, 3) : 0
-  const highMarket = highestVpMarketCard(game)
-  const disruptTarget = highMarket ? cards.get(highMarket)! : undefined
-  const leader = leaderTarget(players, player)
-  const leaderBestCard = leader ? highestVpTableauCard(leader) : undefined
-  const leaderBest = leaderBestCard ? cards.get(leaderBestCard)!.vp : 0
   const forcedEvent = card.effect === 'shock' ? events.get(shockEventForCard(card)) : undefined
   const effectValue =
     card.effect === 'shield' ? 6 + card.vp * 2 :
-    card.effect === 'decoy' ? 6 + card.vp :
     card.effect === 'priority' ? 6 + (game.round <= 5 ? 3 : 0) :
     card.effect === 'shock' ? 8 + sumMap(forcedEvent?.costMod) + sumMap(forcedEvent?.incomeMod) :
-    card.effect === 'seize' ? 9 + leaderBest * 5 :
-    card.effect === 'destroy' ? (leaderBest ? 7 + leaderBest * 4 : disruptTarget && disruptTarget.id !== card.id ? 5 + disruptTarget.vp * 3 : 2) :
     0
 
   return (learnedPower[card.id] ?? 0) + vpValue + incomeValue + effectValue + denial - costPressure * 0.45
@@ -329,32 +301,11 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
   switch (card.effect) {
     case 'shield':
       break
-    case 'decoy':
-      break
     case 'priority':
       claimPriority(game, players, player)
       break
     case 'shock': {
       game.event = events.get(shockEventForCard(card))
-      break
-    }
-    case 'seize': {
-      const target = leaderTarget(players, player)
-      const targetCard = target ? highestVpTableauCard(target) : undefined
-      if (!target || !targetCard) break
-      target.tableau = target.tableau.filter((cardId) => cardId !== targetCard)
-      player.tableau.push(targetCard)
-      break
-    }
-    case 'destroy': {
-      const target = leaderTarget(players, player)
-      const targetCard = target ? highestVpTableauCard(target) : undefined
-      if (target && targetCard) {
-        target.tableau = target.tableau.filter((cardId) => cardId !== targetCard)
-        game.discard.push(targetCard)
-        break
-      }
-      cycleMarketCards(game, [highestVpMarketCard(game)].filter(Boolean))
       break
     }
   }

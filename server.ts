@@ -208,7 +208,7 @@ function botFocusValue(player: Player, card: Card) {
 function botCardValue(room: Room, player: Player, card: Card) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ shield: 8, decoy: 7, priority: 7, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
+    ? ({ shield: 8, priority: 7, shock: 9 } as Record<string, number>)[card.effect]
     : 0
   const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
 
@@ -255,27 +255,6 @@ function cycleMarketCards(room: Room, cardIds: string[]) {
   room.game.discard.push(...removed)
   fillMarket(room)
   return removed
-}
-
-function highestVpMarketCard(room: Room) {
-  return [...room.game.market].sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
-}
-
-function tableauVp(player: Player) {
-  return player.tableau.reduce((sum, cardId) => sum + (cardsById.get(cardId)?.vp ?? 0), 0)
-}
-
-function leaderTarget(room: Room, player: Player) {
-  return [...room.players]
-    .filter((candidate) => candidate.id !== player.id && candidate.tableau.some((cardId) => cardsById.get(cardId)?.effect !== 'shield'))
-    .sort((a, b) => tableauVp(b) - tableauVp(a))[0]
-}
-
-function highestVpTableauCard(player: Player) {
-  const targetable = [...player.tableau].filter((cardId) => cardsById.get(cardId)?.effect !== 'shield')
-  const decoys = targetable.filter((cardId) => cardsById.get(cardId)?.effect === 'decoy')
-  return (decoys.length ? decoys : targetable)
-    .sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -362,10 +341,7 @@ function nextActive(room: Room) {
 function applyEffect(room: Room, player: Player, card: Card) {
   switch (card.effect) {
     case 'shield':
-      log(room, `${player.name} shielded ${card.name} from Seize and Destroy.`)
-      break
-    case 'decoy':
-      log(room, `${player.name} made ${card.name} the first target for rival Seize and Destroy effects.`)
+      log(room, `${player.name} protected ${card.name} from suit-lock events.`)
       break
     case 'priority':
       claimPriority(room, player)
@@ -376,32 +352,6 @@ function applyEffect(room: Room, player: Player, card: Card) {
       room.game.event = forcedEventId
       const event = eventsById.get(forcedEventId)
       log(room, `${player.name} replaced the event with ${event?.name ?? 'a forced event'}.`)
-      break
-    }
-    case 'seize': {
-      const targetPlayer = leaderTarget(room, player)
-      const targetCard = targetPlayer ? highestVpTableauCard(targetPlayer) : undefined
-      if (!targetPlayer || !targetCard) {
-        log(room, `${player.name} found no rival card to seize.`)
-        break
-      }
-      targetPlayer.tableau = targetPlayer.tableau.filter((cardId) => cardId !== targetCard)
-      player.tableau.push(targetCard)
-      log(room, `${player.name} seized ${cardsById.get(targetCard)?.name} from ${targetPlayer.name}.`)
-      break
-    }
-    case 'destroy': {
-      const targetPlayer = leaderTarget(room, player)
-      const targetCard = targetPlayer ? highestVpTableauCard(targetPlayer) : undefined
-      if (targetPlayer && targetCard) {
-        targetPlayer.tableau = targetPlayer.tableau.filter((cardId) => cardId !== targetCard)
-        room.game.discard.push(targetCard)
-        log(room, `${player.name} destroyed ${cardsById.get(targetCard)?.name} from ${targetPlayer.name}.`)
-        break
-      }
-      const marketTarget = highestVpMarketCard(room)
-      const removed = marketTarget ? cycleMarketCards(room, [marketTarget]) : []
-      log(room, removed.length ? `${player.name} destroyed ${cardsById.get(removed[0])?.name} from the market.` : `${player.name} found no card to destroy.`)
       break
     }
   }

@@ -337,7 +337,7 @@ function TableauZone({
           <h2>{player.name}</h2>
           {player.focus?.length ? <p className="focus-label">{focusText(player)}</p> : null}
           <p className="turn-line">
-            {player.actionsTaken} turns · {player.cardsBuilt} built · {player.tableau.length} tableau
+            {player.actionsTaken} turns · {player.cardsBuilt} built
           </p>
         </div>
       </div>
@@ -414,10 +414,10 @@ function BrokenMechanics() {
 
 function ComboGuide() {
   const combos = [
-    ['Decoy -> Finisher', 'Use a Decoy before an exposed high-VP card so Seize and Destroy hit the decoy first.'],
+    ['Shield -> Blocked Suit', 'Use Shield cards when an event would normally lock that card suit.'],
     ['Priority -> Market Snipe', 'Take initiative before a visible late card or key resource card gets contested.'],
-    ['Shock -> Bad Window', 'Build first, then push the table into a worse event for everyone still waiting.'],
-    ['Seize/Destroy -> Naked Leader', 'Punish a player who built points without Shield or Decoy cover.'],
+    ['Shock -> Bad Window', 'Build first, then replace the current event with a worse window for everyone still waiting.'],
+    ['Income -> Finisher', 'Build reusable income early so expensive VP cards become reachable later.'],
   ]
 
   return (

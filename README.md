@@ -60,8 +60,6 @@ When a card is built:
 - Resolve its immediate effect.
 - Refill the market back to 5 cards.
 
-Tableau size is not the same thing as number of turns. `Seize` can move a card into your tableau, and `Destroy` can remove a card from someone else's tableau. The UI tracks turns, cards built, and current tableau cards separately.
-
 After every player has acted, the next phase begins.
 
 ## Scoring
@@ -81,14 +79,11 @@ Printed resource bonuses on cards below 3 VP count as income icons. They refresh
 
 Every card belongs to one of a few clear effect families:
 
-- Shield: local buff that protects that card from Seize and Destroy.
-- Decoy: local buff that forces Seize and Destroy to hit that card before your other vulnerable cards.
+- Shield: local buff that lets that card be built through suit-lock events.
 - Priority: local buff that gives you the Priority Card. Its owner acts first next phase.
 - Shock: global debuff manipulation that replaces the current event with that card's forced event.
-- Seize: take the highest-VP card from the current leader's tableau.
-- Destroy: trash the highest-VP card from the current leader's tableau, or from the market if no leader has cards.
 
-The design principle is that every card should feel unfair in a concrete way, while the public market gives opponents a chance to race, deny, or punish it.
+There is no stealing or deleting built cards. Interaction comes from racing the public market, taking Priority, and forcing event windows.
 
 ## Card Roles
 
@@ -97,15 +92,14 @@ Cards show a lightweight role tag to make the deck easier to scan:
 - Setup: build income for later turns.
 - Protect: keep your real payoff alive.
 - Timing: win the market or event window.
-- Punish: attack an exposed leader.
 - Finisher: expensive points that close the game.
 
 ## Common Combos
 
-- Decoy -> Finisher: build a Decoy before a big VP card so Seize and Destroy hit the decoy first.
+- Shield -> Blocked Suit: use Shield cards when an event would normally lock that card suit.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
 - Shock -> Bad Window: build first, then replace the current event with a card-specific crisis for everyone still waiting.
-- Seize/Destroy -> Naked Leader: punish a player who built points without Shield or Decoy cover.
+- Income -> Finisher: build reusable income early so expensive VP cards become reachable later.
 
 ## Current Card Themes
 

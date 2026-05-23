@@ -480,6 +480,22 @@ function botAct(room: Room) {
 
 io.on('connection', (socket) => {
   socket.on('joinDefault', ({ name }: { name: string }, ack) => {
+    const existingRoom = rooms.get(DEFAULT_ROOM_ID)
+    if (existingRoom) {
+      const human = existingRoom.players.find((player) => !player.isBot)
+      if (human) {
+        const previousId = human.id
+        human.id = socket.id
+        human.name = name?.trim().slice(0, 18) || human.name
+        if (existingRoom.game.priorityPlayerId === previousId) existingRoom.game.priorityPlayerId = socket.id
+      }
+      existingRoom.hostId = socket.id
+      socket.join(DEFAULT_ROOM_ID)
+      ack?.(view(existingRoom))
+      broadcast(existingRoom)
+      return
+    }
+
     const room: Room = {
       id: DEFAULT_ROOM_ID,
       hostId: socket.id,

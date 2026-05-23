@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import {
   Banknote,
@@ -616,6 +616,7 @@ function App() {
   const socket = useSocket()
   const [room, setRoom] = useState<Room | null>(null)
   const [notice, setNotice] = useState('')
+  const joinedSocketId = useRef<string | null>(null)
 
   useEffect(() => {
     if (!socket) return
@@ -635,18 +636,24 @@ function App() {
   useEffect(() => {
     if (!socket) return
     const join = () => {
+      if (!socket.id || joinedSocketId.current === socket.id) return
+      joinedSocketId.current = socket.id
       const name = localStorage.getItem('gpu-game-name') ?? 'Green GPU Co.'
       socket.emit('joinDefault', { name }, (reply: Room | { error: string }) => {
         if (!('error' in reply)) setRoom(reply)
       })
     }
-    const currentSocketMissing = Boolean(room && socket.id && room.players.every((player) => player.id !== socket.id))
-    if (!room || currentSocketMissing) join()
+    const resetJoin = () => {
+      joinedSocketId.current = null
+    }
+    if (socket.connected) join()
     socket.on('connect', join)
+    socket.on('disconnect', resetJoin)
     return () => {
       socket.off('connect', join)
+      socket.off('disconnect', resetJoin)
     }
-  }, [socket, room])
+  }, [socket])
 
   return (
     <>

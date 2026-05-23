@@ -51,6 +51,7 @@ export type EventCard = {
   costMod?: Partial<ResourceMap>
   incomeMod?: Partial<ResourceMap>
   trackBonus?: Partial<TrackMap>
+  blockedSuits?: string[]
 }
 
 export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
@@ -110,6 +111,9 @@ export const productiveIncome = (card: Card): Partial<ResourceMap> | undefined =
 
 export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   const cost = emptyResources()
+  if (event?.blockedSuits?.includes(card.suit) && card.effect !== 'hack') {
+    return { money: 99, influence: 99, compute: 99, energy: 99 }
+  }
   const vpPremium = Math.max(0, card.vp - 2)
   for (const resource of RESOURCES) {
     const eventMod = card.effect === 'hack' ? Math.min(0, event?.costMod?.[resource] ?? 0) : event?.costMod?.[resource] ?? 0
@@ -226,4 +230,9 @@ export const EVENTS: EventCard[] = [
   { id: 'reverse-engineering-rumor', name: 'Reverse-Engineering Rumor', headline: 'Nobody confirms the lab exists.', rule: 'Gain +1 Compute. Influence costs +1.', incomeMod: { compute: 1 }, costMod: { influence: 1 } },
   { id: 'hyperscaler-panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Gain +1 Money and +1 Compute.', incomeMod: { money: 1, compute: 1 } },
   { id: 'water-permit-drama', name: 'Water Permit Drama', headline: 'Cooling towers become local politics.', rule: 'Energy costs +1. Gain +1 Influence.', costMod: { energy: 1 }, incomeMod: { influence: 1 } },
+  { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Fabrication cards cannot be built unless they Hack.', blockedSuits: ['Fabrication'] },
+  { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Software cards cannot be built unless they Hack.', blockedSuits: ['Software'] },
+  { id: 'grid-emergency', name: 'Grid Emergency', headline: 'The utility stops pretending there is spare power.', rule: 'Energy cards cannot be built unless they Hack.', blockedSuits: ['Energy'] },
+  { id: 'customs-seizure', name: 'Customs Seizure', headline: 'A container full of accelerators becomes evidence.', rule: 'Market cards cannot be built unless they Hack.', blockedSuits: ['Market'] },
+  { id: 'cloud-audit', name: 'Cloud Audit', headline: 'Every reservation gets reviewed by legal.', rule: 'Demand cards cannot be built unless they Hack.', blockedSuits: ['Demand'] },
 ]

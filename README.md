@@ -40,6 +40,8 @@ At the start of each phase:
 
 Events are separate from the 52-card deck. They are short global shocks like `Tariff Whiplash`, `ASML Credential Leak`, `Engineer Poaching War`, and `Power Price Spike`.
 
+Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`. Hack cards ignore these locks.
+
 On your turn, choose one:
 
 - Build one card from the common market.

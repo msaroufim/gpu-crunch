@@ -155,6 +155,11 @@ function canPay(player: Player, card: Card, event?: EventCard) {
   return RESOURCES.every((resource) => player.budget[resource] >= cardCost[resource])
 }
 
+function canPayWithBudget(budget: ResourceMap, card: Card, event?: EventCard) {
+  const cardCost = cost(card, event)
+  return RESOURCES.every((resource) => budget[resource] >= cardCost[resource])
+}
+
 function replaceNextEvent(game: Game, forcedEventId: string) {
   if (game.events.length === 0) return false
   game.events[0] = forcedEventId
@@ -165,6 +170,12 @@ function resetBudget(game: Game, player: Player) {
   player.budget = baseBudget()
   for (const cardId of player.tableau) addBudget(player.budget, productiveIncome(cards.get(cardId)!))
   addBudget(player.budget, game.event?.incomeMod)
+}
+
+function tableauBudget(player: Player) {
+  const budget = baseBudget()
+  for (const cardId of player.tableau) addBudget(budget, productiveIncome(cards.get(cardId)!))
+  return budget
 }
 
 function seedOpeningMarket(game: Game) {
@@ -619,6 +630,166 @@ function summarizeOptions(games: number) {
   }
 }
 
+function emptyImpactBucket() {
+  return {
+    decisions: 0,
+    baseOptions: 0,
+    eventOptions: 0,
+    denied: 0,
+    allowed: 0,
+    unchanged: 0,
+    zeroImpact: 0,
+    hardDenied: 0,
+    actionChanged: 0,
+    buildChanged: 0,
+    scoutChanged: 0,
+  }
+}
+
+type ImpactBucket = ReturnType<typeof emptyImpactBucket>
+
+function addImpactSample(
+  bucket: ImpactBucket,
+  base: Set<string>,
+  event: Set<string>,
+  marketCards: Card[],
+  eventCard: EventCard | undefined,
+  baseAction: string,
+  eventAction: string,
+) {
+  let denied = 0
+  let allowed = 0
+  for (const cardId of base) {
+    if (!event.has(cardId)) denied += 1
+  }
+  for (const cardId of event) {
+    if (!base.has(cardId)) allowed += 1
+  }
+  bucket.decisions += 1
+  bucket.baseOptions += base.size
+  bucket.eventOptions += event.size
+  bucket.denied += denied
+  bucket.allowed += allowed
+  bucket.unchanged += marketCards.length - denied - allowed
+  if (denied === 0 && allowed === 0) bucket.zeroImpact += 1
+  if (eventCard?.blockedSuits) {
+    bucket.hardDenied += marketCards.filter((card) => base.has(card.id) && eventCard.blockedSuits?.includes(card.suit)).length
+  }
+  if (baseAction !== eventAction) {
+    bucket.actionChanged += 1
+    if (baseAction === 'scout' || eventAction === 'scout') bucket.scoutChanged += 1
+    else bucket.buildChanged += 1
+  }
+}
+
+function impactLine(label: string, bucket: ImpactBucket) {
+  const n = bucket.decisions || 1
+  const base = bucket.baseOptions / n
+  const event = bucket.eventOptions / n
+  const denied = bucket.denied / n
+  const allowed = bucket.allowed / n
+  return `${label}: base ${base.toFixed(2)} -> event ${event.toFixed(2)} playable, denied ${denied.toFixed(2)}, newly allowed ${allowed.toFixed(2)}, net ${(event - base).toFixed(2)}, action changed ${(100 * bucket.actionChanged / n).toFixed(1)}%, build swapped ${(100 * bucket.buildChanged / n).toFixed(1)}%, scout toggled ${(100 * bucket.scoutChanged / n).toFixed(1)}%, no option impact ${(100 * bucket.zeroImpact / n).toFixed(1)}%, hard-denied ${(bucket.hardDenied / n).toFixed(2)} (${bucket.decisions} decisions)`
+}
+
+function intendedAction(game: Game, players: Player[], player: Player, playable: Card[]) {
+  if (shouldScout(player, [...playable], game.round)) return 'scout'
+  return chooseBuild(game, players, player, [...playable]).id
+}
+
+function summarizeEventImpact(games: number) {
+  const strategies: Strategy[] = [
+    'balanced',
+    'engine',
+    'vp',
+    'effects',
+    'scout',
+    'moneyCompute',
+    'influenceEnergy',
+    'computeEnergy',
+    'moneyInfluence',
+    'shark',
+    'apex',
+  ]
+  const overall = emptyImpactBucket()
+  const byEvent = Object.fromEntries(EVENTS.map((event) => [event.id, emptyImpactBucket()])) as Record<string, ImpactBucket>
+  const byRound = Object.fromEntries(Array.from({ length: GAME_PHASES }, (_, index) => [index + 1, emptyImpactBucket()])) as Record<number, ImpactBucket>
+
+  for (let seed = 1; seed <= games; seed += 1) {
+    const lineup = [strategies[(seed - 1) % strategies.length], strategies[seed % strategies.length], strategies[(seed + 1) % strategies.length]]
+    const random = rng(seed)
+    const replayGame: Game = {
+      deck: weightedDeck(random),
+      market: [],
+      discard: [],
+      events: makeEventDeck(random, GAME_PHASES),
+      active: 0,
+      round: 0,
+      log: [],
+      playableCounts: [],
+      playableSamples: [],
+      effectBuilds: 0,
+      scouts: 0,
+      chains: 0,
+    }
+    const replayPlayers = lineup.map((strategy, index) => makePlayer(['You', 'Supply Desk', 'Policy Shop'][index], strategy))
+    seedOpeningMarket(replayGame)
+
+    while (replayGame.round < GAME_PHASES) {
+      startNextRound(replayGame, replayPlayers)
+
+      let guard = 0
+      while (!replayPlayers.every((player) => player.passed) && guard < 20) {
+        guard += 1
+        const player = replayPlayers[replayGame.active]
+        const eventCard = replayGame.event
+        const baseBudget = tableauBudget(player)
+        const marketCards = replayGame.market
+          .map((id) => id ? cards.get(id) : undefined)
+          .filter((card): card is Card => Boolean(card))
+        const basePlayable = new Set(marketCards.filter((card) => canPayWithBudget(baseBudget, card)).map((card) => card.id))
+        const eventPlayable = new Set(marketCards.filter((card) => canPay(player, card, eventCard)).map((card) => card.id))
+        const basePlayers = clonePlayers(replayPlayers)
+        basePlayers.forEach((basePlayer) => {
+          basePlayer.budget = tableauBudget(basePlayer)
+        })
+        const basePlayer = basePlayers[replayGame.active]
+        const baseGame = { ...cloneGame(replayGame), event: undefined }
+        const basePlayableCards = marketCards.filter((card) => basePlayable.has(card.id))
+        const eventPlayableCards = marketCards.filter((card) => eventPlayable.has(card.id))
+        const baseAction = intendedAction(baseGame, basePlayers, basePlayer, basePlayableCards)
+        const eventAction = intendedAction(replayGame, replayPlayers, player, eventPlayableCards)
+
+        addImpactSample(overall, basePlayable, eventPlayable, marketCards, eventCard, baseAction, eventAction)
+        addImpactSample(byRound[replayGame.round], basePlayable, eventPlayable, marketCards, eventCard, baseAction, eventAction)
+        if (eventCard) addImpactSample(byEvent[eventCard.id], basePlayable, eventPlayable, marketCards, eventCard, baseAction, eventAction)
+
+        const playable = eventPlayableCards
+        if (shouldScout(player, playable, replayGame.round)) {
+          scout(replayGame, replayPlayers, player)
+        } else {
+          const best = chooseBuild(replayGame, replayPlayers, player, playable)
+          const built = build(replayGame, replayPlayers, player, best.id)
+          if (continuesAfterBuild(built)) continue
+        }
+        nextActive(replayGame, replayPlayers)
+      }
+    }
+  }
+
+  console.log(`Simulated ${games} games for event choice impact.`)
+  console.log(impactLine('overall', overall))
+
+  console.log('\nBy event:')
+  for (const event of EVENTS) {
+    console.log(impactLine(event.name, byEvent[event.id]))
+  }
+
+  console.log('\nBy phase:')
+  for (const round of Object.keys(byRound).map(Number).sort((a, b) => a - b)) {
+    console.log(impactLine(`phase ${round}`, byRound[round]))
+  }
+}
+
 function summarizeBatch(games: number) {
   const strategies: Strategy[] = [
     'balanced',
@@ -907,4 +1078,5 @@ else if (mode === 'duel') summarizeDuelBatch(Number(process.argv[3] ?? 50))
 else if (mode === 'cards') summarizeCardStats(Number(process.argv[3] ?? 1000))
 else if (mode === 'mirror') summarizeApexMirror(Number(process.argv[3] ?? 500))
 else if (mode === 'options') summarizeOptions(Number(process.argv[3] ?? 500))
+else if (mode === 'events') summarizeEventImpact(Number(process.argv[3] ?? 500))
 else summarizeSingle(Number(mode))

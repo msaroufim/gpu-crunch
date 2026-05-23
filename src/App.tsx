@@ -42,6 +42,9 @@ type Player = {
   tableau: string[]
   passed: boolean
   initiative: boolean
+  actionsThisPhase: number
+  actionsTaken: number
+  cardsBuilt: number
   score: number
 }
 
@@ -116,6 +119,11 @@ function mapText<T extends string>(map?: Partial<Record<T, number>>, labels?: Re
 
 function focusText(player: Player) {
   return player.focus?.map((resource) => resourceLabels[resource]).join(' + ')
+}
+
+function actionStatus(player: Player, active?: boolean) {
+  if (active) return 'Acting now'
+  return player.actionsThisPhase > 0 ? 'Acted this phase' : 'Pending'
 }
 
 function adjustedCost(card: Card, event?: EventCard): ResourceMap {
@@ -253,6 +261,10 @@ function PlayerPanel({ player, active, you, seat }: { player: Player; active: bo
         </strong>
         {active && <Hourglass size={16} />}
       </div>
+      <div className="turn-stats">
+        <span>{actionStatus(player, active)}</span>
+        <span>{player.actionsTaken} turns</span>
+      </div>
       {player.initiative && <div className="priority-badge">Holds Priority Card</div>}
       {player.focus?.length ? <p className="focus-label">{focusText(player)}</p> : null}
       <div className="resource-grid">
@@ -324,10 +336,13 @@ function TableauZone({
           <span>{title}</span>
           <h2>{player.name}</h2>
           {player.focus?.length ? <p className="focus-label">{focusText(player)}</p> : null}
+          <p className="turn-line">
+            {player.actionsTaken} turns · {player.cardsBuilt} built · {player.tableau.length} tableau
+          </p>
         </div>
       </div>
       <div className="tableau-cards">
-        {player.tableau.length === 0 && <p className="empty-zone">No built cards yet.</p>}
+        {player.tableau.length === 0 && <p className="empty-zone">No tableau cards yet.</p>}
         {player.tableau.map((cardId) => {
           const card = cards.get(cardId)
           return card ? <CardView key={cardId} card={card} event={event} compact={!isYou} /> : null

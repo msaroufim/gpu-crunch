@@ -29,6 +29,9 @@ type Player = {
   tableau: string[]
   passed: boolean
   initiative: boolean
+  actionsThisPhase: number
+  actionsTaken: number
+  cardsBuilt: number
   score: number
 }
 
@@ -116,6 +119,9 @@ function freshPlayer(id: string, name: string, isBot = false, focus?: Resource[]
     tableau: [],
     passed: false,
     initiative: false,
+    actionsThisPhase: 0,
+    actionsTaken: 0,
+    cardsBuilt: 0,
     score: 0,
   }
 }
@@ -294,6 +300,7 @@ function startRound(room: Room) {
   const event = currentEvent(room)
   room.players.forEach((player) => {
     player.passed = false
+    player.actionsThisPhase = 0
     player.resources = phaseBudget(player, event)
   })
   const initiativeIndex = room.game.priorityPlayerId
@@ -314,6 +321,9 @@ function startGame(room: Room) {
     player.tableau = []
     player.passed = false
     player.initiative = false
+    player.actionsThisPhase = 0
+    player.actionsTaken = 0
+    player.cardsBuilt = 0
     player.score = 0
   })
   room.game = {
@@ -407,6 +417,9 @@ function buildCard(room: Room, player: Player, cardId: string) {
 
   for (const resource of RESOURCES) player.resources[resource] -= cost[resource]
 
+  player.actionsThisPhase += 1
+  player.actionsTaken += 1
+  player.cardsBuilt += 1
   player.tableau.push(cardId)
   room.game.market = room.game.market.filter((id) => id !== cardId)
   fillMarket(room)
@@ -420,6 +433,8 @@ function buildCard(room: Room, player: Player, cardId: string) {
 function startScout(room: Room, player: Player) {
   const removed = cycleMarketCards(room, room.game.market.slice(0, 2))
   claimPriority(room, player)
+  player.actionsThisPhase += 1
+  player.actionsTaken += 1
   player.passed = true
   log(room, `${player.name} scouted the market, cycled ${removed.length} cards, and took next-phase initiative.`)
   nextActive(room)

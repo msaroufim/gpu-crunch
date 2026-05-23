@@ -60,6 +60,8 @@ When a card is built:
 - Resolve its immediate effect.
 - Refill the market back to 5 cards.
 
+Tableau size is not the same thing as number of turns. `Seize` can move a card into your tableau, and `Destroy` can remove a card from someone else's tableau. The UI tracks turns, cards built, and current tableau cards separately.
+
 After every player has acted, the next phase begins.
 
 ## Scoring

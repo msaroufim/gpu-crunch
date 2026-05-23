@@ -179,12 +179,16 @@ function seedOpeningMarket(game: Game) {
   })
 }
 
-function fillOneMarketSlot(game: Game) {
-  const emptyIndex = game.market.findIndex((cardId) => cardId === null)
-  const nextCard = game.deck.shift()
-  if (emptyIndex < 0 || !nextCard) return null
-  game.market[emptyIndex] = nextCard
-  return nextCard
+function fillEmptyMarketSlots(game: Game) {
+  let filled = 0
+  for (let index = 0; index < game.market.length; index += 1) {
+    if (game.market[index] !== null) continue
+    const nextCard = game.deck.shift()
+    if (!nextCard) break
+    game.market[index] = nextCard
+    filled += 1
+  }
+  return filled
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -331,19 +335,19 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
 }
 
 function scout(game: Game, players: Player[], player: Player) {
-  const addedCardId = fillOneMarketSlot(game)
+  const filledSlots = fillEmptyMarketSlots(game)
   player.passed = true
   const claimedPriority = claimPriority(game, players, player)
   player.scouts += 1
   game.scouts += 1
   game.log.push(
-    addedCardId
+    filledSlots > 0
       ? claimedPriority
-        ? `${player.name} (${player.strategy}) scouts, fills ${cards.get(addedCardId)?.name}, and takes Priority.`
-        : `${player.name} (${player.strategy}) scouts and fills ${cards.get(addedCardId)?.name}.`
+        ? `${player.name} (${player.strategy}) scouts, fills ${filledSlots} empty slots, and takes Priority.`
+        : `${player.name} (${player.strategy}) scouts and fills ${filledSlots} empty slots.`
       : claimedPriority
-        ? `${player.name} (${player.strategy}) scouts, finds no empty slot, and takes Priority.`
-        : `${player.name} (${player.strategy}) scouts and finds no empty slot.`,
+        ? `${player.name} (${player.strategy}) scouts, finds no empty slots, and takes Priority.`
+        : `${player.name} (${player.strategy}) scouts and finds no empty slots.`,
   )
 }
 

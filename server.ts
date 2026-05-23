@@ -248,12 +248,16 @@ function seedOpeningMarket(room: Room) {
   })
 }
 
-function fillOneMarketSlot(room: Room) {
-  const emptyIndex = room.game.market.findIndex((cardId) => cardId === null)
-  const nextCard = room.game.deck.shift()
-  if (emptyIndex < 0 || !nextCard) return null
-  room.game.market[emptyIndex] = nextCard
-  return nextCard
+function fillEmptyMarketSlots(room: Room) {
+  let filled = 0
+  for (let index = 0; index < room.game.market.length; index += 1) {
+    if (room.game.market[index] !== null) continue
+    const nextCard = room.game.deck.shift()
+    if (!nextCard) break
+    room.game.market[index] = nextCard
+    filled += 1
+  }
+  return filled
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -384,21 +388,20 @@ function buildCard(room: Room, player: Player, cardId: string) {
 }
 
 function startScout(room: Room, player: Player) {
-  const addedCardId = fillOneMarketSlot(room)
-  const addedCard = addedCardId ? cardsById.get(addedCardId) : undefined
+  const filledSlots = fillEmptyMarketSlots(room)
   const claimedPriority = claimPriority(room, player)
   player.actionsThisPhase += 1
   player.actionsTaken += 1
   player.passed = true
   log(
     room,
-    addedCard
+    filledSlots > 0
       ? claimedPriority
-        ? `${player.name} scouted, filled an empty slot with ${addedCard.name}, and took next-phase initiative.`
-        : `${player.name} scouted and filled an empty slot with ${addedCard.name}. Priority Card was already claimed.`
+        ? `${player.name} scouted, filled ${filledSlots} empty market slots, and took next-phase initiative.`
+        : `${player.name} scouted and filled ${filledSlots} empty market slots. Priority Card was already claimed.`
       : claimedPriority
-        ? `${player.name} scouted, found no empty market slot to fill, and took next-phase initiative.`
-        : `${player.name} scouted but found no empty market slot to fill. Priority Card was already claimed.`,
+        ? `${player.name} scouted, found no empty market slots to fill, and took next-phase initiative.`
+        : `${player.name} scouted but found no empty market slots to fill. Priority Card was already claimed.`,
   )
   nextActive(room)
 }

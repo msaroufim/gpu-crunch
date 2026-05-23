@@ -48,7 +48,7 @@ Players start with no tableau and 0 resources. The opening market is seeded with
 - `Water Permit`: Influence + Energy.
 - `Hopper Fire Sale`: Money + Compute, tilted harder toward Compute.
 
-After the starter market, new cards enter only when Scout fills an empty supply slot from the normal deck order.
+After the starter market, new cards enter only when Scout fills empty supply slots from the normal deck order.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals a 12-phase crisis queue by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
@@ -58,7 +58,7 @@ Events can change costs, block suits, or reduce budgets, but they do not create 
 On your turn, choose one:
 
 - Build one card from the common market.
-- Scout: fill one empty market slot from the deck. If the Priority Card is unclaimed this phase, take it.
+- Scout: fill every empty market slot from the deck. If the Priority Card is unclaimed this phase, take it.
 
 Most builds end your turn for the phase.
 
@@ -108,7 +108,7 @@ Cards show a lightweight role tag to make the deck easier to scan:
 
 ## Common Combos
 
-- Scout -> Priority: be the first player to skip a weak market, fill an empty slot, and act first when the next phase opens.
+- Scout -> Priority: be the first player to skip a weak market, refill empty slots, and act first when the next phase opens.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
 - Shock -> Bad Window: replace the next visible crisis with a card-specific crisis so everyone can see the bad window coming.
 - Income -> Finisher: build reusable income early so expensive VP cards become reachable later.

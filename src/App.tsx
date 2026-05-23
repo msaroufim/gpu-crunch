@@ -506,7 +506,7 @@ function MarketRow({
             return (
               <div className="market-empty-slot" key={`empty-${index}`}>
                 <span>Empty slot</span>
-                <p>Scout fills one open supply slot.</p>
+                <p>Scout fills all open supply slots.</p>
               </div>
             )
           }
@@ -547,7 +547,7 @@ function BrokenMechanics() {
 
 function ComboGuide() {
   const combos = [
-    ['Scout -> Priority', 'Skip a weak market, fill one empty market slot, and act first when the next phase opens.'],
+    ['Scout -> Priority', 'Skip a weak market, refill every empty market slot, and act first when the next phase opens.'],
     ['Priority -> Market Snipe', 'Take initiative before a visible late card or key resource card gets contested.'],
     ['Shock -> Bad Window', 'Replace the next visible crisis so everyone can see the bad window coming.'],
     ['Income -> Finisher', 'Build reusable income early so expensive VP cards become reachable later.'],
@@ -738,7 +738,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 makes their printed cost harsher.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>Each shock is one phase. Each player gets one action per shock: build one card or Scout.</p>
-            <p>Scout skips your build and fills one empty market slot from the deck. The first Priority claim each phase acts first next phase.</p>
+            <p>Scout skips your build and fills every empty market slot from the deck. The first Priority claim each phase acts first next phase.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>

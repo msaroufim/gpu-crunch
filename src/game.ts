@@ -130,23 +130,65 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   }
   if (card.starter) return cost
   const printedCostTotal = RESOURCES.reduce((sum, resource) => sum + (card.cost[resource] ?? 0), 0)
-  const resourcePremium = (resource: Resource, premium: number) => {
-    if (premium <= 0) return 0
-    const printed = card.cost[resource] ?? 0
-    if (printedCostTotal === 0) return resource === 'money' ? premium : 0
-    if (printed === 0) return 0
-    return Math.max(1, Math.floor((premium * printed) / printedCostTotal))
+  const allocatedPremium = (premium: number): Partial<ResourceMap> => {
+    if (premium <= 0) return {}
+    if (printedCostTotal === 0) return { money: premium }
+    const printedResources = RESOURCES
+      .filter((resource) => (card.cost[resource] ?? 0) > 0)
+      .map((resource) => {
+        const exact = (premium * (card.cost[resource] ?? 0)) / printedCostTotal
+        return {
+          resource,
+          base: Math.floor(exact),
+          remainder: exact - Math.floor(exact),
+        }
+      })
+    let allocated = printedResources.reduce((sum, item) => sum + item.base, 0)
+    for (const item of [...printedResources].sort((a, b) => b.remainder - a.remainder)) {
+      if (allocated >= premium) break
+      item.base += 1
+      allocated += 1
+    }
+    return printedResources.reduce<Partial<ResourceMap>>((next, item) => {
+      if (item.base > 0) next[item.resource] = item.base
+      return next
+    }, {})
   }
-  const vpPremium = card.vp >= 3 ? card.vp === 3 ? 2 : card.vp - 2 : 0
+  const allocatedDiscount = (discount: number): Partial<ResourceMap> => {
+    if (discount <= 0 || printedCostTotal === 0) return {}
+    const printedResources = RESOURCES
+      .filter((resource) => (card.cost[resource] ?? 0) > 0)
+      .map((resource) => ({
+        resource,
+        printed: card.cost[resource] ?? 0,
+      }))
+      .sort((a, b) => b.printed - a.printed)
+    const next: Partial<ResourceMap> = {}
+    let remaining = discount
+    for (const item of printedResources) {
+      if (remaining <= 0) break
+      next[item.resource] = (next[item.resource] ?? 0) + 1
+      remaining -= 1
+    }
+    return next
+  }
+  const vpPremium = card.vp >= 4 ? card.vp - 3 : 0
   const priorityPremium = card.effect === 'priority'
-    ? card.tier === 1 ? 0 : card.tier === 2 ? 2 : 3
+    ? card.tier === 1 ? 0 : card.tier === 2 ? 1 : 2
     : 0
+  const curveDiscount = card.tier === 1 ? 0 : 1
+  const premiumByResource = addMaps(
+    addMaps(emptyResources(), allocatedPremium(vpPremium)),
+    allocatedPremium(priorityPremium),
+  )
+  const discountByResource = allocatedDiscount(curveDiscount)
   for (const resource of RESOURCES) {
     const printed = card.cost[resource] ?? 0
     const rawEventMod = event?.costMod?.[resource] ?? 0
     const eventMod = printed > 0 ? rawEventMod : Math.min(0, rawEventMod)
-    const premium = resourcePremium(resource, vpPremium) + resourcePremium(resource, priorityPremium)
-    cost[resource] = Math.max(0, printed + eventMod + premium)
+    const premium = premiumByResource[resource] ?? 0
+    const discount = discountByResource[resource] ?? 0
+    cost[resource] = Math.max(0, printed + eventMod + premium - discount)
   }
   return cost
 }

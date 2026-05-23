@@ -12,6 +12,7 @@ import {
   effectRules,
   effectiveCost,
   isStarterCardId,
+  phaseSupplyRefill,
   productiveIncome,
   shockEventForCard,
   type Card,
@@ -205,9 +206,9 @@ function seedOpeningMarket(game: Game) {
   })
 }
 
-function fillEmptyMarketSlots(game: Game) {
+function fillEmptyMarketSlots(game: Game, limit = SCOUT_REFILL_SIZE) {
   let filled = 0
-  for (let index = STARTER_MARKET_SIZE; index < game.market.length && filled < SCOUT_REFILL_SIZE; index += 1) {
+  for (let index = STARTER_MARKET_SIZE; index < game.market.length && filled < limit; index += 1) {
     if (game.market[index] !== null) continue
     const nextCard = game.deck.shift()
     if (!nextCard) break
@@ -438,6 +439,7 @@ function scorePlayers(players: Player[]) {
 function startNextRound(game: Game, players: Player[]) {
   game.round += 1
   game.event = game.round === 1 ? undefined : events.get(game.events.shift()!)
+  fillEmptyMarketSlots(game, phaseSupplyRefill(game.round))
   players.forEach((player) => {
     player.passed = false
     resetBudget(game, player)

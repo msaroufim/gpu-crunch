@@ -211,7 +211,7 @@ export const CARDS: Card[] = [
   c('lobbyist-dinner', 'Anti-AI Protest Backlash', 'Policy', 2, 'mid', 'A protest blocks one site and quietly unlocks subsidies in another state.', { money: 2, influence: 1 }, { influence: 1 }, undefined, { policy: 3 }, 2, 'policy', 'shock'),
   c('customs-waiver', 'Customs Waiver', 'Policy', 1, 'early', 'A signature beats a warehouse full of boxes.', { influence: 1 }, { money: 1, compute: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'shock'),
   c('tariff-arbitrage', 'Tariff Midnight Loophole', 'Policy', 2, 'mid', 'The route is longer, the invoice is cleaner, and rivals eat the delay.', { money: 2, influence: 2 }, { money: 2 }, undefined, { policy: 2, moat: 1 }, 2, 'policy', 'shock'),
-  c('earthquake-insurance', 'Regulatory Fixer', 'Policy', 1, 'early', 'A former staffer knows which inbox makes permits appear.', {}, undefined, { influence: 2 }, { policy: 1 }, 0, 'policy', undefined, true),
+  c('earthquake-insurance', 'Lobby', 'Policy', 1, 'early', 'A former staffer knows which inbox makes permits appear.', {}, undefined, { influence: 2 }, { policy: 1 }, 0, 'policy', undefined, true),
   c('port-strike-buffer', 'Port Strike Buffer', 'Risk', 1, 'early', 'Inventory is inefficient until it saves you.', { money: 2 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'risk'),
   c('dram-price-spike', 'DRAM Price Spike', 'Memory', 2, 'mid', 'A bad quarter for buyers, a great quarter for you.', { money: 2, influence: 1 }, { money: 3 }, undefined, { moat: 2 }, 2, 'memory', 'shock'),
   c('networking-fabric', 'Networking Fabric', 'Cluster', 2, 'mid', 'The GPUs were never the whole cluster.', { compute: 3 }, { compute: 1 }, { compute: 1 }, { capacity: 2, moat: 1 }, 2, 'network', 'priority'),
@@ -259,6 +259,14 @@ export const OPENING_MAIN_CARD_IDS = [
   'customs-waiver',
   'university-lab-grant',
 ]
+
+export const phaseSupplyRefill = (phase: number) => {
+  if (phase <= 1) return 0
+  if (phase <= 3) return 1
+  if (phase <= 6) return 2
+  if (phase <= 9) return 4
+  return 6
+}
 
 export const EVENTS: EventCard[] = [
   { id: 'china-sales-window', name: 'H20 Suitcase Diplomat', headline: 'A very normal pallet of China-compliant accelerators gets diplomatic immunity.', rule: 'Money costs -2. Compute costs +1.', costMod: { money: -2, compute: 1 } },

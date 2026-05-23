@@ -14,6 +14,7 @@ import {
   OPENING_MARKET_CARD_IDS,
   OPENING_MAIN_CARD_IDS,
   isStarterCardId,
+  phaseSupplyRefill,
   type Card,
   type EventCard,
   type Resource,
@@ -268,9 +269,9 @@ function seedOpeningMarket(room: Room) {
   })
 }
 
-function fillEmptyMarketSlots(room: Room) {
+function fillEmptyMarketSlots(room: Room, limit = SCOUT_REFILL_SIZE) {
   let filled = 0
-  for (let index = STARTER_MARKET_SIZE; index < room.game.market.length && filled < SCOUT_REFILL_SIZE; index += 1) {
+  for (let index = STARTER_MARKET_SIZE; index < room.game.market.length && filled < limit; index += 1) {
     if (room.game.market[index] !== null) continue
     const nextCard = room.game.deck.shift()
     if (!nextCard) break
@@ -301,6 +302,7 @@ function startRound(room: Room) {
   game.event = game.round === 1
     ? null
     : game.eventDeck.shift() ?? shuffle(EVENTS.map((event) => event.id))[0]
+  const refilled = fillEmptyMarketSlots(room, phaseSupplyRefill(game.round))
   const event = currentEvent(room)
   room.players.forEach((player) => {
     player.passed = false
@@ -315,7 +317,7 @@ function startRound(room: Room) {
     player.initiative = false
   })
   game.priorityPlayerId = null
-  log(room, `Phase ${game.round}: ${event?.name ?? 'Opening Draft'} is active.`)
+  log(room, `Phase ${game.round}: ${event?.name ?? 'Opening Draft'} is active${refilled ? `, market refills ${refilled}` : ''}.`)
 }
 
 function startGame(room: Room) {

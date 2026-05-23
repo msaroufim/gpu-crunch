@@ -69,11 +69,13 @@ const cards = new Map(CARDS.map((card) => [card.id, card]))
 const events = new Map(EVENTS.map((event) => [event.id, event]))
 
 function claimPriority(game: Game, players: Player[], player: Player) {
+  if (game.priorityPlayer) return false
   players.forEach((candidate) => {
     candidate.initiative = false
   })
   player.initiative = true
   game.priorityPlayer = player.name
+  return true
 }
 const learnedPower: Partial<Record<string, number>> = {
   'grace-cpu-bundle': 30,
@@ -327,10 +329,14 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
 function scout(game: Game, players: Player[], player: Player) {
   cycleMarketCards(game, game.market.slice(0, 2))
   player.passed = true
-  claimPriority(game, players, player)
+  const claimedPriority = claimPriority(game, players, player)
   player.scouts += 1
   game.scouts += 1
-  game.log.push(`${player.name} (${player.strategy}) scouts and cycles the market.`)
+  game.log.push(
+    claimedPriority
+      ? `${player.name} (${player.strategy}) scouts, cycles the market, and takes Priority.`
+      : `${player.name} (${player.strategy}) scouts and cycles the market.`,
+  )
 }
 
 function shouldScout(player: Player, playable: Card[], round: number) {

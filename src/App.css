@@ -190,7 +190,7 @@ button:disabled {
 }
 
 .game-shell {
-  padding: 18px;
+  padding: 12px;
   background:
     linear-gradient(90deg, rgba(31, 76, 113, 0.08) 1px, transparent 1px),
     linear-gradient(0deg, rgba(31, 76, 113, 0.08) 1px, transparent 1px),
@@ -199,13 +199,13 @@ button:disabled {
 }
 
 .game-header {
-  min-height: 64px;
-  margin-bottom: 14px;
+  min-height: 48px;
+  margin-bottom: 10px;
 }
 
 .game-header h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: 28px;
   color: #102033;
 }
 
@@ -215,31 +215,30 @@ button:disabled {
 
 .event-band {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 18px;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   border: 1px solid #bcc9d4;
   border-radius: 8px;
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: #172331;
   color: #dce9f2;
 }
 
 .shock-queue {
   display: grid;
-  grid-template-columns: repeat(9, minmax(132px, 1fr));
-  gap: 8px;
-  margin: -6px 0 14px;
-  overflow-x: auto;
-  padding-bottom: 4px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  margin: -4px 0 10px;
+  overflow: hidden;
 }
 
 .shock-card {
-  min-width: 132px;
+  min-width: 0;
   border: 1px solid #c5d0da;
   border-radius: 8px;
-  padding: 9px;
+  padding: 7px;
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 10px 22px rgba(20, 37, 55, 0.06);
 }
@@ -274,7 +273,7 @@ button:disabled {
 }
 
 .shock-card p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #5e6c78;
   font-size: 11px;
   font-weight: 750;
@@ -300,8 +299,8 @@ button:disabled {
 
 .board-layout {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 300px;
-  gap: 14px;
+  grid-template-columns: 210px minmax(0, 1fr) 250px;
+  gap: 10px;
   align-items: start;
   min-width: 0;
 }
@@ -309,24 +308,24 @@ button:disabled {
 .left-rail,
 .right-rail {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
 .player-panel {
   --seat-color: #687685;
-  padding: 12px;
+  padding: 9px;
   border-top: 4px solid var(--seat-color);
 }
 
 .priority-card {
   display: grid;
-  gap: 8px;
-  min-height: 132px;
+  gap: 6px;
+  min-height: 104px;
   border: 1px solid #aebcbe;
   border-top: 4px solid #0f766e;
   border-radius: 8px;
-  padding: 12px;
+  padding: 9px;
   color: #102033;
   background:
     linear-gradient(90deg, rgba(15, 118, 110, 0.08) 1px, transparent 1px),
@@ -354,14 +353,14 @@ button:disabled {
 .priority-card h2 {
   margin: 0;
   color: #102033;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
 }
 
 .priority-card p {
   margin: 0;
   color: #51606c;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
   line-height: 1.3;
 }
@@ -516,12 +515,12 @@ button:disabled {
 
 .play-area {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
 .section-heading {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: #102033;
 }
 
@@ -859,7 +858,7 @@ button:disabled {
   max-width: 100%;
   border: 1px solid #d6dde3;
   border-radius: 8px;
-  padding: 12px;
+  padding: 9px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 12px 32px rgba(20, 37, 55, 0.06);
 }
@@ -961,7 +960,7 @@ button:disabled {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   min-width: 0;
 }
 
@@ -981,23 +980,120 @@ button:disabled {
 
 .tableau-cards,
 .market-cards {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  padding-bottom: 4px;
+  display: grid;
+  gap: 8px;
+  overflow: visible;
+  padding-bottom: 0;
+}
+
+.market-cards {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.tableau-cards {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
 }
 
 .tableau-zone.mine .tableau-cards .game-card {
-  flex: 0 0 224px;
+  width: 100%;
 }
 
 .tableau-cards .game-card.compact {
-  flex: 0 0 156px;
+  width: 100%;
 }
 
 .market-cards .game-card {
-  flex: 0 0 220px;
+  min-width: 0;
+  min-height: 248px;
+  grid-template-rows: auto 48px auto auto minmax(32px, auto) auto auto;
+  gap: 5px;
+  padding: 6px;
+  box-shadow: 0 8px 18px rgba(18, 34, 51, 0.07);
+}
+
+.market-cards .card-topline {
+  gap: 4px;
+}
+
+.market-cards .card-corner small {
+  font-size: 8px;
+}
+
+.market-cards .card-resource-cluster {
+  gap: 2px;
+  max-width: 64px;
+}
+
+.market-cards .card-resource-cluster span,
+.market-cards .empty-cluster,
+.market-cards .starter-cost {
+  min-height: 17px;
+  padding: 0 4px;
+  font-size: 9px;
+}
+
+.market-cards .card-resource-cluster svg {
+  width: 11px;
+  height: 11px;
+}
+
+.market-cards .card-art span {
+  min-width: 32px;
+  min-height: 24px;
+  border-width: 1px;
+  font-size: 13px;
+}
+
+.market-cards .card-art::before {
+  inset: 10px;
+  border-width: 1px;
+}
+
+.market-cards .card-art::after {
+  inset: 18px;
+  border-width: 1px;
+}
+
+.market-cards .card-name-row {
+  gap: 4px;
+  font-size: 8px;
+}
+
+.market-cards .role-chip,
+.market-cards .starter-chip {
+  padding: 2px 5px;
+  font-size: 8px;
+}
+
+.market-cards .game-card h3 {
+  min-height: 30px;
+  font-size: 12px;
+  line-height: 1.12;
+}
+
+.market-cards .game-card p {
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+.market-cards .special-box {
+  grid-template-columns: 30px 1fr;
+  gap: 4px;
+  padding: 4px;
+  font-size: 8px;
+}
+
+.market-cards .special-box span,
+.market-cards .special-box b,
+.market-cards .special-box em {
+  font-size: 8px;
+}
+
+.market-cards .build-button {
+  height: 28px;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 11px;
 }
 
 .empty-zone {
@@ -1152,6 +1248,10 @@ button:disabled {
     grid-column: 1 / -1;
     grid-template-columns: 1fr 1fr;
   }
+
+  .market-cards {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 820px) {
@@ -1189,6 +1289,14 @@ button:disabled {
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .shock-queue {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .market-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .card-grid {

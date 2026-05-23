@@ -168,11 +168,13 @@ function currentEvent(room: Room): EventCard | undefined {
 }
 
 function claimPriority(room: Room, player: Player) {
+  if (room.game.priorityPlayerId) return false
   room.players.forEach((candidate) => {
     candidate.initiative = false
   })
   player.initiative = true
   room.game.priorityPlayerId = player.id
+  return true
 }
 
 function cardCost(room: Room, card: Card): ResourceMap {
@@ -335,8 +337,11 @@ function nextActive(room: Room) {
 function applyEffect(room: Room, player: Player, card: Card) {
   switch (card.effect) {
     case 'priority':
-      claimPriority(room, player)
-      log(room, `${player.name} took next-phase initiative with ${card.name}.`)
+      if (claimPriority(room, player)) {
+        log(room, `${player.name} took next-phase initiative with ${card.name}.`)
+      } else {
+        log(room, `${player.name} built ${card.name}, but Priority Card was already claimed.`)
+      }
       break
     case 'shock': {
       const forcedEventId = shockEventForCard(card)
@@ -373,11 +378,16 @@ function buildCard(room: Room, player: Player, cardId: string) {
 
 function startScout(room: Room, player: Player) {
   const removed = cycleMarketCards(room, room.game.market.slice(0, 2))
-  claimPriority(room, player)
+  const claimedPriority = claimPriority(room, player)
   player.actionsThisPhase += 1
   player.actionsTaken += 1
   player.passed = true
-  log(room, `${player.name} scouted the market, cycled ${removed.length} cards, and took next-phase initiative.`)
+  log(
+    room,
+    claimedPriority
+      ? `${player.name} scouted the market, cycled ${removed.length} cards, and took next-phase initiative.`
+      : `${player.name} scouted the market and cycled ${removed.length} cards. Priority Card was already claimed.`,
+  )
   nextActive(room)
 }
 

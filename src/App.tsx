@@ -730,7 +730,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 makes their printed cost harsher.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>Each shock is one phase. Each player gets one action per shock: build one card or Scout.</p>
-            <p>Scout skips your build, cycles the two leftmost market cards, and gives you first action next phase.</p>
+            <p>Scout skips your build and cycles the two leftmost market cards. The first Priority claim each phase acts first next phase.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>

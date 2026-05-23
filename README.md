@@ -22,7 +22,7 @@ Players compete to build the strongest AI infrastructure tableau from a shared m
 ## Components
 
 - 52-card deck
-- 11-card common market
+- 12-card common market
 - Event deck of brief market shocks
 - Four resources: Money, Influence, Compute, Energy
 - Vendor seats: green, red, and blue GPU vendors with different resource focuses
@@ -40,7 +40,7 @@ At the start of each phase:
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
 
-Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards plus six normal deck cards, so the first turns are about choosing one starter card at a time while seeing early branches. Each starter opens a small tech branch:
+Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards plus seven normal deck cards, so the first turns are about choosing one starter card at a time while seeing early branches. Each starter opens a small tech branch:
 
 - `Substrate Supplier`: Money + Compute.
 - `Firmware Miracle`: Compute + Energy.
@@ -58,7 +58,7 @@ Events can change costs, block suits, or reduce budgets, but they do not create 
 On your turn, choose one:
 
 - Build one card from the common market.
-- Scout: cycle the two leftmost market cards and take the Priority Card.
+- Scout: cycle the two leftmost market cards. If the Priority Card is unclaimed this phase, take it.
 
 Most builds end your turn for the phase.
 
@@ -69,7 +69,7 @@ When a card is built:
 - Pay its visible cost.
 - Add it to your tableau.
 - Resolve its immediate effect.
-- Refill the market back to 11 cards.
+- Refill the market back to 12 cards.
 
 After every player has acted, the next phase begins.
 
@@ -92,7 +92,7 @@ Printed resource bonuses on cards below 3 VP count as income icons. They refresh
 
 Every card belongs to one of a few clear effect families:
 
-- Priority: local buff that gives you the Priority Card. Its owner acts first next phase.
+- Priority: local buff that gives you the Priority Card if it is unclaimed. Its owner acts first next phase.
 - Shock: global debuff manipulation that replaces the current event with that card's forced event.
 
 There is no stealing or deleting built cards. Interaction comes from racing the public market, taking Priority, and forcing event windows.
@@ -108,7 +108,7 @@ Cards show a lightweight role tag to make the deck easier to scan:
 
 ## Common Combos
 
-- Scout -> Priority: skip a weak market so you can act first when the next phase opens.
+- Scout -> Priority: be the first player to skip a weak market so you can act first when the next phase opens.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
 - Shock -> Bad Window: build first, then replace the current event with a card-specific crisis for everyone still waiting.
 - Income -> Finisher: build reusable income early so expensive VP cards become reachable later.

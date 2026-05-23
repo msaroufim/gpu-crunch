@@ -244,14 +244,14 @@ export const OPENING_MARKET_CARD_IDS = [
 ]
 
 export const EVENTS: EventCard[] = [
-  { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -2. Compute costs +1.', costMod: { money: -2, compute: 1 } },
-  { id: 'tariff-whiplash', name: 'Tariff Whiplash', headline: 'The same shipment has three different prices.', rule: 'Influence costs -2. Energy costs -1. Money costs +1.', costMod: { money: 1, influence: -2, energy: -1 } },
-  { id: 'asml-credential-leak', name: 'ASML Credential Leak', headline: 'A toolchain login becomes a board-level incident.', rule: 'Compute costs -2. Money costs -1. Influence costs +1.', costMod: { money: -1, influence: 1, compute: -2 } },
-  { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Money costs -2. Energy costs -1. Compute costs +1. Fabrication cards cannot be built.', costMod: { money: -2, compute: 1, energy: -1 }, blockedSuits: ['Fabrication'] },
-  { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Energy costs -2. Influence costs -1. Compute costs +1. Software cards cannot be built.', costMod: { influence: -1, compute: 1, energy: -2 }, blockedSuits: ['Software'] },
-  { id: 'hbm-sold-out', name: 'HBM Sold Out', headline: 'Memory vendors stop answering calls.', rule: 'Money costs -2. Influence costs -1. Compute costs +1.', costMod: { money: -2, influence: -1, compute: 1 } },
-  { id: 'power-price-spike', name: 'Power Price Spike', headline: 'The marginal megawatt gets ugly.', rule: 'Compute costs -2. Money costs -1. Energy costs +1.', costMod: { money: -1, compute: -2, energy: 1 } },
-  { id: 'panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Money costs -2. Compute costs -2. Influence costs +1.', costMod: { money: -2, compute: -2, influence: 1 } },
+  { id: 'china-sales-window', name: 'H20 Suitcase Diplomat', headline: 'A very normal pallet of China-compliant accelerators gets diplomatic immunity.', rule: 'Money costs -2. Compute costs +1.', costMod: { money: -2, compute: 1 } },
+  { id: 'tariff-whiplash', name: 'Tariff Armageddon Spreadsheet', headline: 'Customs asks whether a chiller is a GPU if it has vibes.', rule: 'Influence costs -2. Energy costs -1. Money costs +1.', costMod: { money: 1, influence: -2, energy: -1 } },
+  { id: 'asml-credential-leak', name: 'ASML Password Is litho123', headline: 'The cleanroom Slack insists this is fine because the login had an emoji.', rule: 'Compute costs -2. Money costs -1. Influence costs +1.', costMod: { money: -1, influence: 1, compute: -2 } },
+  { id: 'foundry-lockdown', name: 'CoWoS Bouncer Checks The List', headline: 'Everyone has wafers, nobody has the wristband for advanced packaging.', rule: 'Money costs -2. Energy costs -1. Compute costs +1. Fabrication cards cannot be built.', costMod: { money: -2, compute: 1, energy: -1 }, blockedSuits: ['Fabrication'] },
+  { id: 'compiler-zero-day', name: 'Triton Intern Deletes Matmul', headline: 'A heroic kernel lands at 2 a.m. and immediately becomes a regulatory event.', rule: 'Energy costs -2. Influence costs -1. Compute costs +1. Software cards cannot be built.', costMod: { influence: -1, compute: 1, energy: -2 }, blockedSuits: ['Software'] },
+  { id: 'hbm-sold-out', name: 'HBM Vendor Left You On Read', headline: 'The memory wall becomes a literal wall with velvet rope and bottle service.', rule: 'Money costs -2. Influence costs -1. Compute costs +1.', costMod: { money: -2, influence: -1, compute: 1 } },
+  { id: 'power-price-spike', name: 'Datacenter Asks For One More Gigawatt', headline: 'The utility replies with a laughing emoji and a 2031 interconnect date.', rule: 'Compute costs -2. Money costs -1. Energy costs +1.', costMod: { money: -1, compute: -2, energy: 1 } },
+  { id: 'panic-order', name: 'SemiAnalysis Article Hits Slack', headline: 'Procurement forwards one chart and suddenly every CFO discovers capex courage.', rule: 'Money costs -2. Compute costs -2. Influence costs +1.', costMod: { money: -2, compute: -2, influence: 1 } },
 ]
 
 const shockEventByCardId: Record<string, string> = {

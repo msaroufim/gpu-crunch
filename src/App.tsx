@@ -215,7 +215,7 @@ function CardView({
           <div className="special-box">
             <span>Buff</span>
             <b>{effect ? effect.name : 'No special action'}</b>
-            <em>{effect ? effect.text : mapText(card.gain, resourceLabels)}</em>
+            <em>{effect ? effect.text : `Income: ${mapText(productiveIncome(card), resourceLabels)}`}</em>
           </div>
         </>
       )}
@@ -229,9 +229,13 @@ function CardView({
   )
 }
 
-function PlayerPanel({ player, active, you }: { player: Player; active: boolean; you: boolean }) {
+function seatTone(index: number) {
+  return ['seat-green', 'seat-red', 'seat-blue', 'seat-neutral'][index] ?? 'seat-neutral'
+}
+
+function PlayerPanel({ player, active, you, seat }: { player: Player; active: boolean; you: boolean; seat: string }) {
   return (
-    <section className={`player-panel ${active ? 'active' : ''} ${you ? 'you' : ''}`}>
+    <section className={`player-panel ${seat} ${active ? 'active' : ''} ${you ? 'you' : ''}`}>
       <div className="player-heading">
         <strong>
           {player.name}
@@ -280,15 +284,17 @@ function TableauZone({
   cards,
   event,
   isYou = false,
+  seat,
 }: {
   title: string
   player: Player
   cards: Map<string, Card>
   event?: EventCard
   isYou?: boolean
+  seat: string
 }) {
   return (
-    <section className={`tableau-zone ${isYou ? 'mine' : ''}`}>
+    <section className={`tableau-zone ${seat} ${isYou ? 'mine' : ''}`}>
       <div className="zone-title">
         <div>
           <span>{title}</span>
@@ -448,6 +454,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
               player={player}
               active={index === room.game.activePlayer && room.game.status === 'playing'}
               you={player.id === socket?.id}
+              seat={seatTone(index)}
             />
           ))}
           {room.game.status === 'finished' && <Scoreboard room={room} />}
@@ -472,12 +479,28 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             </div>
             <div className="opponent-tableaus">
               {opponents.map((player) => (
-                <TableauZone key={player.id} title="Opponent tableau" player={player} cards={cards} event={event} />
+                <TableauZone
+                  key={player.id}
+                  title="Opponent tableau"
+                  player={player}
+                  cards={cards}
+                  event={event}
+                  seat={seatTone(room.players.findIndex((candidate) => candidate.id === player.id))}
+                />
               ))}
             </div>
           </section>
 
-          {you && <TableauZone title="My tableau" player={you} cards={cards} event={event} isYou />}
+          {you && (
+            <TableauZone
+              title="My tableau"
+              player={you}
+              cards={cards}
+              event={event}
+              isYou
+              seat={seatTone(room.players.findIndex((candidate) => candidate.id === you.id))}
+            />
+          )}
 
           <section className="action-dock">
             <div className="section-heading">
@@ -503,6 +526,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <h2>Scoring</h2>
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 adds Money and Compute cost.</p>
+            <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>Scout skips your build, cycles the two leftmost market cards, and gives you first action next phase.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
@@ -546,7 +570,7 @@ function App() {
   useEffect(() => {
     if (!socket) return
     const join = () => {
-      const name = localStorage.getItem('gpu-game-name') ?? 'Player'
+      const name = localStorage.getItem('gpu-game-name') ?? 'Green GPU Co.'
       socket.emit('joinDefault', { name }, (reply: Room | { error: string }) => {
         if (!('error' in reply)) setRoom(reply)
       })

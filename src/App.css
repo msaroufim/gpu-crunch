@@ -255,12 +255,14 @@ button:disabled {
 }
 
 .player-panel {
+  --seat-color: #687685;
   padding: 12px;
+  border-top: 4px solid var(--seat-color);
 }
 
 .player-panel.active {
-  border-color: #1f73a8;
-  box-shadow: 0 0 0 2px rgba(31, 115, 168, 0.14), 0 12px 32px rgba(20, 37, 55, 0.08);
+  border-color: var(--seat-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--seat-color) 24%, transparent), 0 12px 32px rgba(20, 37, 55, 0.08);
 }
 
 .player-panel.you .player-heading strong::after {
@@ -271,6 +273,22 @@ button:disabled {
   margin-left: 7px;
   border-radius: 50%;
   background: #2d9c62;
+}
+
+.seat-green {
+  --seat-color: #2ca84f;
+}
+
+.seat-red {
+  --seat-color: #c9443f;
+}
+
+.seat-blue {
+  --seat-color: #2f68c9;
+}
+
+.seat-neutral {
+  --seat-color: #687685;
 }
 
 .resource-grid,
@@ -660,6 +678,10 @@ button:disabled {
   padding: 12px;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 12px 32px rgba(20, 37, 55, 0.06);
+}
+
+.tableau-zone {
+  border-top: 4px solid var(--seat-color, #687685);
 }
 
 .opponent-tableaus {

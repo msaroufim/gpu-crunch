@@ -22,12 +22,10 @@ export type Card = {
 }
 
 export type EffectId =
-  | 'scout'
-  | 'surge'
-  | 'raid'
-  | 'disrupt'
-  | 'chain'
-  | 'hack'
+  | 'boost'
+  | 'shock'
+  | 'seize'
+  | 'destroy'
 
 export type ArtKey =
   | 'fab'
@@ -72,12 +70,10 @@ export const trackLabels: Record<Track, string> = {
 }
 
 export const effectRules: Record<EffectId, { name: string; text: string; broken?: boolean }> = {
-  scout: { name: 'Scout', text: 'Cycle the two lowest-VP market cards. Gain +1 Influence this phase.', broken: true },
-  surge: { name: 'Surge', text: 'Gain +3 Money, +2 Compute, and +2 Energy this phase.', broken: true },
-  raid: { name: 'Raid', text: 'Each rival loses 1 Money and 1 Compute if able. You gain what they lose.', broken: true },
-  disrupt: { name: 'Disrupt', text: 'Trash the highest-VP card in the market, then refill it.', broken: true },
-  chain: { name: 'Chain', text: 'Immediately take another action.', broken: true },
-  hack: { name: 'Hack', text: 'Ignore event cost penalties on this build. This card costs -2 Money.', broken: true },
+  boost: { name: 'Boost', text: "Local buff: double this card's income icons.", broken: true },
+  shock: { name: 'Shock', text: 'Global debuff: replace the current event with the next event in the deck.', broken: true },
+  seize: { name: 'Seize', text: "Take the highest-VP card from the current leader's tableau.", broken: true },
+  destroy: { name: 'Destroy', text: "Trash the highest-VP card from the current leader's tableau. If none, trash the highest-VP market card.", broken: true },
 }
 
 export const emptyResources = (): ResourceMap => ({
@@ -107,20 +103,34 @@ export const addMaps = <K extends string>(
 }
 
 export const productiveIncome = (card: Card): Partial<ResourceMap> | undefined =>
-  card.vp >= 3 ? undefined : card.income
+  card.vp >= 3
+    ? undefined
+    : card.effect === 'boost'
+      ? addMaps(addMaps(addMaps(emptyResources(), card.income), card.gain), addMaps(addMaps(emptyResources(), card.income), card.gain))
+      : addMaps(addMaps(emptyResources(), card.income), card.gain)
+
+export const continuesAfterBuild = () =>
+  false
 
 export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   const cost = emptyResources()
-  if (event?.blockedSuits?.includes(card.suit) && card.effect !== 'hack') {
+  if (event?.blockedSuits?.includes(card.suit)) {
     return { money: 99, influence: 99, compute: 99, energy: 99 }
   }
   const moneyVpPremium = card.vp >= 3 ? card.vp === 3 ? 2 : card.vp - 2 : 0
   const computeVpPremium = card.vp >= 3 ? Math.ceil((card.vp - 2) / 2) : 0
   for (const resource of RESOURCES) {
-    const eventMod = card.effect === 'hack' ? Math.min(0, event?.costMod?.[resource] ?? 0) : event?.costMod?.[resource] ?? 0
-    const hackDiscount = card.effect === 'hack' && resource === 'money' ? -2 : 0
+    const eventMod = event?.costMod?.[resource] ?? 0
     const premium = resource === 'money' ? moneyVpPremium : resource === 'compute' ? computeVpPremium : 0
-    cost[resource] = Math.max(0, (card.cost[resource] ?? 0) + eventMod + hackDiscount + premium)
+    const effectPremium =
+      card.effect === 'seize'
+        ? resource === 'money' ? 2 : resource === 'influence' ? 1 : 0
+        : card.effect === 'destroy'
+          ? resource === 'money' || resource === 'influence' ? 1 : 0
+          : card.effect === 'shock' && resource === 'influence'
+            ? 1
+            : 0
+    cost[resource] = Math.max(0, (card.cost[resource] ?? 0) + eventMod + premium + effectPremium)
   }
   return cost
 }
@@ -158,66 +168,66 @@ const c = (
 })
 
 export const CARDS: Card[] = [
-  c('taiwan-foundry-slot', 'Taiwan Foundry Slot', 'Fabrication', 1, 'early', 'A wafer start with everyone watching the calendar.', { money: 2, influence: 1 }, { compute: 1 }, { money: 1 }, { capacity: 2 }, 1, 'fab', 'hack'),
-  c('hbm-allocation', 'HBM Allocation', 'Memory', 1, 'early', 'The memory vendor finally returns your call.', { money: 2 }, { compute: 1 }, { compute: 1 }, { capacity: 1, moat: 1 }, 1, 'memory', 'scout'),
-  c('advanced-packaging', 'Advanced Packaging', 'Fabrication', 2, 'mid', 'Tiny bridges, huge bottlenecks.', { money: 3, compute: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 3 }, 2, 'package', 'surge'),
-  c('euv-queue', 'Reverse-Engineered Lithography Rig', 'Fabrication', 2, 'mid', 'A clean-room project with suspiciously familiar tolerances.', { money: 3, influence: 1 }, undefined, { money: 1, compute: 1 }, { capacity: 2, policy: 1 }, 2, 'fab', 'hack'),
-  c('cowos-expansion', 'CoWoS Expansion', 'Fabrication', 3, 'late', 'Capex turns into slots if you can wait long enough.', { money: 4, energy: 1 }, { compute: 3 }, { compute: 2 }, { capacity: 4, grid: 1 }, 4, 'package', 'chain'),
-  c('substrate-supplier', 'Substrate Supplier', 'Fabrication', 1, 'early', 'The unglamorous layer that saves the quarter.', { money: 1 }, { money: 2, compute: 1 }, { money: 1 }, { capacity: 1 }, 1, 'package', 'surge'),
-  c('driver-team', 'Driver Team', 'Software', 1, 'early', 'Half the performance came from a Friday night patch.', { compute: 1 }, { compute: 1 }, { compute: 1 }, { moat: 2 }, 1, 'software', 'hack'),
-  c('cuda-lock-in', 'CUDA Lock-in', 'Software', 2, 'mid', 'Every migration plan starts with a sigh.', { money: 2, compute: 2 }, undefined, { money: 1 }, { moat: 4 }, 3, 'software', 'disrupt'),
-  c('jensen-soju-toast', 'Jensen Soju Toast', 'Market', 1, 'early', 'A table toast turns into another DRAM shipment.', { influence: 2 }, { influence: 1, compute: 1 }, undefined, { policy: 1, moat: 1 }, 2, 'toast', 'scout'),
-  c('sovereign-ai-mou', 'Sovereign AI MoU', 'Policy', 2, 'mid', 'A national plan, a ceremonial pen, and a purchase order.', { influence: 3, money: 1 }, { money: 2 }, { influence: 1 }, { policy: 3, capacity: 1 }, 3, 'policy', 'hack'),
-  c('cloud-preorder', 'Cloud Preorder', 'Demand', 1, 'early', 'Capacity booked before the rack exists.', { money: 2, compute: 1 }, { money: 3 }, { money: 1 }, { moat: 1, capacity: 1 }, 1, 'cloud', 'surge'),
-  c('hyperscaler-panic-buy', 'GPU FOMO Panic Buy', 'Demand', 2, 'mid', 'A benchmark leak makes every CFO approve emergency spend.', { money: 3 }, { money: 1, compute: 1 }, undefined, { moat: 2 }, 2, 'cloud', 'surge'),
-  c('export-license-counsel', 'Export License Counsel', 'Policy', 1, 'early', 'A lawyer turns ambiguity into shipment velocity.', { money: 1, influence: 1 }, { influence: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'hack'),
-  c('data-center-rezoning', 'Election Year Zoning Deal', 'Energy', 2, 'mid', 'A governor needs jobs before November and the permits move overnight.', { money: 2, influence: 2 }, { energy: 2 }, undefined, { grid: 3, policy: 1 }, 2, 'power', 'surge'),
-  c('utility-interconnect', 'Utility Interconnect', 'Energy', 1, 'early', 'The queue number matters more than the brochure.', { money: 2, energy: 1 }, { energy: 1 }, { energy: 1 }, { grid: 2 }, 1, 'power', 'hack'),
-  c('nuclear-ppa', 'Nuclear PPA', 'Energy', 3, 'late', 'Baseload with lawyers attached.', { money: 3, influence: 2, energy: 1 }, { energy: 3 }, { energy: 2 }, { grid: 5, policy: 1 }, 5, 'power', 'chain'),
-  c('liquid-cooling-retrofit', 'Liquid Cooling Retrofit', 'Energy', 2, 'mid', 'Your racks stop thermal throttling and start flexing.', { money: 2, energy: 2 }, { compute: 1 }, { compute: 1 }, { grid: 2, capacity: 1 }, 2, 'cooling', 'surge'),
-  c('blackwell-ramp', 'Blackwell Ramp Goes Vertical', 'Silicon', 3, 'late', 'The flagship finally ships and the whole roadmap gets pulled forward.', { money: 4, compute: 1, energy: 1 }, { compute: 4 }, { compute: 2 }, { capacity: 5, moat: 2 }, 6, 'fab', 'chain'),
-  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', { money: 1 }, { compute: 2 }, undefined, { capacity: 1 }, 1, 'market', 'scout'),
-  c('refurbished-mining-rigs', 'Gray-Market Mining Rigs', 'Market', 1, 'early', 'Hashrate becomes batch inference if you squint.', { money: 1, energy: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 1, grid: -1 }, 1, 'market', 'raid'),
-  c('gray-market-broker', 'Dubai Gray-Market Broker', 'Market', 2, 'mid', 'It arrives with no warranty, three invoices, and perfect timing.', { money: 2, influence: 1 }, { compute: 2 }, undefined, { capacity: 1, policy: -1 }, 2, 'market', 'raid'),
-  c('benchmark-leak', 'Vaguepost', 'Market', 1, 'early', 'One founder posts a GPU emoji and the market invents a roadmap.', { influence: 1 }, { money: 1 }, undefined, { moat: 2 }, 1, 'market', 'scout'),
-  c('analyst-day', 'Analyst Day', 'Market', 1, 'early', 'Slides become financing.', { influence: 1 }, { money: 3 }, { money: 1 }, { moat: 1, policy: 1 }, 1, 'market', 'surge'),
-  c('lobbyist-dinner', 'Anti-AI Protest Backlash', 'Policy', 2, 'mid', 'A protest blocks one site and quietly unlocks subsidies in another state.', { money: 2, influence: 1 }, { influence: 1 }, undefined, { policy: 3 }, 2, 'policy', 'raid'),
-  c('customs-waiver', 'Customs Waiver', 'Policy', 1, 'early', 'A signature beats a warehouse full of boxes.', { influence: 1 }, { money: 1, compute: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'hack'),
-  c('tariff-arbitrage', 'Tariff Midnight Loophole', 'Policy', 2, 'mid', 'The route is longer, the invoice is cleaner, and rivals eat the delay.', { money: 2, influence: 2 }, { money: 2 }, undefined, { policy: 2, moat: 1 }, 2, 'policy', 'raid'),
-  c('earthquake-insurance', 'Foundry Earthquake Insurance', 'Risk', 1, 'early', 'You cannot stop the quake, but you can buy resilience.', { money: 1 }, { influence: 1 }, { money: 1 }, { policy: 1, capacity: 1 }, 1, 'risk', 'disrupt'),
-  c('port-strike-buffer', 'Port Strike Buffer', 'Risk', 1, 'early', 'Inventory is inefficient until it saves you.', { money: 2 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'risk', 'scout'),
-  c('dram-price-spike', 'DRAM Price Spike', 'Memory', 2, 'mid', 'A bad quarter for buyers, a great quarter for you.', { money: 2, influence: 1 }, { money: 3 }, undefined, { moat: 2 }, 2, 'memory', 'surge'),
-  c('networking-fabric', 'Networking Fabric', 'Cluster', 2, 'mid', 'The GPUs were never the whole cluster.', { money: 3, compute: 1 }, { compute: 1 }, { compute: 1 }, { capacity: 2, moat: 1 }, 2, 'network', 'raid'),
-  c('infiniband-switch', 'InfiniBand Switch', 'Cluster', 2, 'mid', 'Latency is a resource if you can monopolize it.', { money: 3, energy: 1 }, undefined, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'network', 'disrupt'),
-  c('firmware-miracle', 'Firmware Miracle', 'Software', 1, 'early', 'The same silicon gets a better story.', { compute: 1 }, { compute: 1, energy: 1 }, undefined, { moat: 1 }, 1, 'software', 'chain'),
-  c('chiplet-yield-fix', 'Chiplet Yield Fix', 'Silicon', 2, 'mid', 'A package-level fix turns scraps into margin.', { money: 3, compute: 1 }, { money: 1, compute: 1 }, { money: 1 }, { capacity: 2, moat: 1 }, 2, 'package', 'surge'),
-  c('silicon-photonics-bet', 'Secret Photonics Breakthrough', 'Cluster', 3, 'late', 'The lab demo works once and the board decides once is enough.', { money: 3, compute: 1, influence: 1 }, { compute: 3 }, { compute: 1 }, { capacity: 3, moat: 3 }, 5, 'network', 'chain'),
-  c('government-supercluster', 'Election Supercluster Pledge', 'Policy', 3, 'late', 'A campaign promise turns into a national compute purchasing program.', { money: 3, influence: 3, energy: 1 }, { compute: 3 }, { influence: 1, compute: 1 }, { policy: 4, capacity: 2 }, 5, 'policy', 'scout'),
-  c('university-lab-grant', 'University Lab Grant', 'Policy', 1, 'early', 'Cheap talent, expensive procurement.', { influence: 1 }, { compute: 1 }, { influence: 1 }, { policy: 1, moat: 1 }, 1, 'policy', 'scout'),
-  c('startup-allocation-lottery', 'Startup Allocation Lottery', 'Demand', 1, 'early', 'You won four boards and a cloud credit coupon.', { influence: 1, money: 1 }, { compute: 2, money: 1 }, undefined, { moat: 1 }, 1, 'cloud', 'surge'),
-  c('model-training-deadline', 'Ship the Model', 'Demand', 2, 'mid', 'The evals are weird, the launch date is real, and every cluster gets emptied.', { money: 2, compute: 2 }, { money: 2 }, undefined, { moat: 3 }, 2, 'cloud', 'chain'),
-  c('inference-optimization', 'Acquire vLLM Team', 'Software', 2, 'mid', 'The fastest kernel is the one you bought before lunch.', { compute: 2 }, { energy: 2 }, { money: 1 }, { moat: 2, grid: 1 }, 3, 'software', 'hack'),
-  c('scheduler-wizard', 'Scheduler Wizard', 'Software', 1, 'early', 'Utilization rises without buying another rack.', { money: 1, compute: 1 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'software', 'scout'),
-  c('power-cap-firmware', 'Power Cap Firmware', 'Energy', 1, 'early', 'Less clock, more cluster.', { compute: 1 }, { energy: 2 }, { energy: 1 }, { grid: 2 }, 1, 'power', 'surge'),
-  c('carbon-credit-swap', 'Carbon Credit Swap', 'Energy', 2, 'mid', 'A spreadsheet finds clean power in another county.', { money: 2, influence: 1 }, { energy: 1, influence: 1 }, undefined, { grid: 2, policy: 1 }, 2, 'power', 'hack'),
-  c('water-permit', 'Water Permit', 'Energy', 1, 'early', 'Cooling begins at the county office.', { influence: 1, money: 1 }, { energy: 1 }, { energy: 1 }, { grid: 1, policy: 1 }, 1, 'cooling', 'hack'),
-  c('heat-reuse-district', 'Heat Reuse District', 'Energy', 2, 'mid', 'Waste heat becomes political capital.', { money: 2, energy: 1 }, { influence: 2 }, { influence: 1 }, { grid: 2, policy: 2 }, 3, 'cooling', 'surge'),
-  c('open-source-compiler', 'Open Source Compiler', 'Software', 2, 'mid', 'The community finds performance you did not budget for.', { compute: 1, influence: 2 }, { compute: 1 }, { compute: 1 }, { moat: 2, policy: 1 }, 3, 'software', 'hack'),
-  c('vendor-lock-review', 'Vendor Lock Review', 'Policy', 2, 'mid', 'A procurement memo slows the leader down.', { influence: 2, compute: 1 }, { influence: 1 }, undefined, { policy: 2 }, 2, 'policy', 'disrupt'),
-  c('antitrust-hearing', 'Antitrust Hearing Meltdown', 'Policy', 3, 'late', 'Every moat becomes a hearing exhibit and procurement teams freeze.', { influence: 4, money: 1 }, { influence: 2 }, undefined, { policy: 5, moat: -1 }, 4, 'policy', 'disrupt'),
-  c('boardroom-pivot', 'Boardroom Pivot', 'Market', 2, 'mid', 'The company is an AI infrastructure business now.', { money: 2, influence: 1 }, { money: 1, energy: 1 }, undefined, { moat: 2, grid: 1 }, 2, 'market', 'chain'),
-  c('ipo-war-chest', 'Meme-Stock AI IPO', 'Market', 3, 'late', 'Retail euphoria becomes a war chest before lockup expires.', { money: 2, influence: 2 }, { money: 5 }, { money: 1 }, { moat: 3 }, 5, 'market', 'surge'),
-  c('crypto-demand-returns', 'Crypto Demand Returns', 'Demand', 2, 'mid', 'The bid stack gets weird again.', { energy: 2, money: 2 }, { money: 3 }, undefined, { moat: 1, grid: -1 }, 3, 'market', 'raid'),
-  c('sanctions-shock', 'China War Games Around Taiwan', 'Risk', 3, 'late', 'Joint Sword drills make every sourcing plan feel one headline away from failure.', { influence: 3, money: 2 }, { influence: 2, compute: 1 }, undefined, { policy: 4 }, 4, 'risk', 'disrupt'),
-  c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { money: 3, compute: 1, energy: 1 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'chain'),
+  c('taiwan-foundry-slot', 'Taiwan Foundry Slot', 'Fabrication', 1, 'early', 'A wafer start with everyone watching the calendar.', { money: 2, influence: 1 }, { compute: 1 }, { money: 1 }, { capacity: 2 }, 1, 'fab', 'boost'),
+  c('hbm-allocation', 'HBM Allocation', 'Memory', 1, 'early', 'The memory vendor finally returns your call.', { money: 2 }, { compute: 1 }, { compute: 1 }, { capacity: 1, moat: 1 }, 1, 'memory', 'boost'),
+  c('advanced-packaging', 'Advanced Packaging', 'Fabrication', 2, 'mid', 'Tiny bridges, huge bottlenecks.', { money: 3, compute: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 3 }, 2, 'package', 'boost'),
+  c('euv-queue', 'Reverse-Engineered Lithography Rig', 'Fabrication', 2, 'mid', 'A clean-room project with suspiciously familiar tolerances.', { money: 3, influence: 1 }, undefined, { money: 1, compute: 1 }, { capacity: 2, policy: 1 }, 2, 'fab', 'shock'),
+  c('cowos-expansion', 'CoWoS Expansion', 'Fabrication', 3, 'late', 'Capex turns into slots if you can wait long enough.', { money: 4, energy: 1 }, { compute: 3 }, { compute: 2 }, { capacity: 4, grid: 1 }, 4, 'package', 'destroy'),
+  c('substrate-supplier', 'Substrate Supplier', 'Fabrication', 1, 'early', 'The unglamorous layer that saves the quarter.', { money: 1 }, { money: 2, compute: 1 }, { money: 1 }, { capacity: 1 }, 1, 'package', 'boost'),
+  c('driver-team', 'Driver Team', 'Software', 1, 'early', 'Half the performance came from a Friday night patch.', { compute: 1 }, { compute: 1 }, { compute: 1 }, { moat: 2 }, 1, 'software', 'boost'),
+  c('cuda-lock-in', 'CUDA Lock-in', 'Software', 2, 'mid', 'Every migration plan starts with a sigh.', { money: 2, compute: 2 }, undefined, { money: 1 }, { moat: 4 }, 3, 'software', 'destroy'),
+  c('jensen-soju-toast', 'Jensen Soju Toast', 'Market', 1, 'early', 'A table toast turns into another DRAM shipment.', { influence: 2 }, { influence: 1, compute: 1 }, undefined, { policy: 1, moat: 1 }, 2, 'toast', 'shock'),
+  c('sovereign-ai-mou', 'Sovereign AI MoU', 'Policy', 2, 'mid', 'A national plan, a ceremonial pen, and a purchase order.', { influence: 3, money: 1 }, { money: 2 }, { influence: 1 }, { policy: 3, capacity: 1 }, 3, 'policy', 'shock'),
+  c('cloud-preorder', 'Cloud Preorder', 'Demand', 1, 'early', 'Capacity booked before the rack exists.', { money: 2, compute: 1 }, { money: 3 }, { money: 1 }, { moat: 1, capacity: 1 }, 1, 'cloud', 'boost'),
+  c('hyperscaler-panic-buy', 'GPU FOMO Panic Buy', 'Demand', 2, 'mid', 'A benchmark leak makes every CFO approve emergency spend.', { money: 3 }, { money: 1, compute: 1 }, undefined, { moat: 2 }, 2, 'cloud', 'seize'),
+  c('export-license-counsel', 'Export License Counsel', 'Policy', 1, 'early', 'A lawyer turns ambiguity into shipment velocity.', { money: 1, influence: 1 }, { influence: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'shock'),
+  c('data-center-rezoning', 'Election Year Zoning Deal', 'Energy', 2, 'mid', 'A governor needs jobs before November and the permits move overnight.', { money: 2, influence: 2 }, { energy: 2 }, undefined, { grid: 3, policy: 1 }, 2, 'power', 'shock'),
+  c('utility-interconnect', 'Utility Interconnect', 'Energy', 1, 'early', 'The queue number matters more than the brochure.', { money: 2, energy: 1 }, { energy: 1 }, { energy: 1 }, { grid: 2 }, 1, 'power', 'boost'),
+  c('nuclear-ppa', 'Nuclear PPA', 'Energy', 3, 'late', 'Baseload with lawyers attached.', { money: 3, influence: 2, energy: 1 }, { energy: 3 }, { energy: 2 }, { grid: 5, policy: 1 }, 5, 'power', 'shock'),
+  c('liquid-cooling-retrofit', 'Liquid Cooling Retrofit', 'Energy', 2, 'mid', 'Your racks stop thermal throttling and start flexing.', { money: 2, energy: 2 }, { compute: 1 }, { compute: 1 }, { grid: 2, capacity: 1 }, 2, 'cooling', 'boost'),
+  c('blackwell-ramp', 'Blackwell Ramp Goes Vertical', 'Silicon', 3, 'late', 'The flagship finally ships and the whole roadmap gets pulled forward.', { money: 4, compute: 1, energy: 1 }, { compute: 4 }, { compute: 2 }, { capacity: 5, moat: 2 }, 6, 'fab', 'seize'),
+  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', { money: 1 }, { compute: 2 }, undefined, { capacity: 1 }, 1, 'market', 'boost'),
+  c('refurbished-mining-rigs', 'Gray-Market Mining Rigs', 'Market', 1, 'early', 'Hashrate becomes batch inference if you squint.', { money: 1, energy: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 1, grid: -1 }, 1, 'market', 'seize'),
+  c('gray-market-broker', 'Dubai Gray-Market Broker', 'Market', 2, 'mid', 'It arrives with no warranty, three invoices, and perfect timing.', { money: 2, influence: 1 }, { compute: 2 }, undefined, { capacity: 1, policy: -1 }, 2, 'market', 'seize'),
+  c('benchmark-leak', 'Vaguepost', 'Market', 1, 'early', 'One founder posts a GPU emoji and the market invents a roadmap.', { influence: 1 }, { money: 1 }, undefined, { moat: 2 }, 1, 'market', 'shock'),
+  c('analyst-day', 'Analyst Day', 'Market', 1, 'early', 'Slides become financing.', { influence: 1 }, { money: 3 }, { money: 1 }, { moat: 1, policy: 1 }, 1, 'market', 'boost'),
+  c('lobbyist-dinner', 'Anti-AI Protest Backlash', 'Policy', 2, 'mid', 'A protest blocks one site and quietly unlocks subsidies in another state.', { money: 2, influence: 1 }, { influence: 1 }, undefined, { policy: 3 }, 2, 'policy', 'seize'),
+  c('customs-waiver', 'Customs Waiver', 'Policy', 1, 'early', 'A signature beats a warehouse full of boxes.', { influence: 1 }, { money: 1, compute: 1 }, { influence: 1 }, { policy: 2 }, 1, 'policy', 'shock'),
+  c('tariff-arbitrage', 'Tariff Midnight Loophole', 'Policy', 2, 'mid', 'The route is longer, the invoice is cleaner, and rivals eat the delay.', { money: 2, influence: 2 }, { money: 2 }, undefined, { policy: 2, moat: 1 }, 2, 'policy', 'seize'),
+  c('earthquake-insurance', 'Foundry Earthquake Insurance', 'Risk', 1, 'early', 'You cannot stop the quake, but you can buy resilience.', { money: 1 }, { influence: 1 }, { money: 1 }, { policy: 1, capacity: 1 }, 1, 'risk', 'destroy'),
+  c('port-strike-buffer', 'Port Strike Buffer', 'Risk', 1, 'early', 'Inventory is inefficient until it saves you.', { money: 2 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'risk', 'destroy'),
+  c('dram-price-spike', 'DRAM Price Spike', 'Memory', 2, 'mid', 'A bad quarter for buyers, a great quarter for you.', { money: 2, influence: 1 }, { money: 3 }, undefined, { moat: 2 }, 2, 'memory', 'boost'),
+  c('networking-fabric', 'Networking Fabric', 'Cluster', 2, 'mid', 'The GPUs were never the whole cluster.', { money: 3, compute: 1 }, { compute: 1 }, { compute: 1 }, { capacity: 2, moat: 1 }, 2, 'network', 'seize'),
+  c('infiniband-switch', 'InfiniBand Switch', 'Cluster', 2, 'mid', 'Latency is a resource if you can monopolize it.', { money: 3, energy: 1 }, undefined, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'network', 'destroy'),
+  c('firmware-miracle', 'Firmware Miracle', 'Software', 1, 'early', 'The same silicon gets a better story.', { compute: 1 }, { compute: 1, energy: 1 }, undefined, { moat: 1 }, 1, 'software', 'boost'),
+  c('chiplet-yield-fix', 'Chiplet Yield Fix', 'Silicon', 2, 'mid', 'A package-level fix turns scraps into margin.', { money: 3, compute: 1 }, { money: 1, compute: 1 }, { money: 1 }, { capacity: 2, moat: 1 }, 2, 'package', 'boost'),
+  c('silicon-photonics-bet', 'Secret Photonics Breakthrough', 'Cluster', 3, 'late', 'The lab demo works once and the board decides once is enough.', { money: 3, compute: 1, influence: 1 }, { compute: 3 }, { compute: 1 }, { capacity: 3, moat: 3 }, 5, 'network', 'shock'),
+  c('government-supercluster', 'Election Supercluster Pledge', 'Policy', 3, 'late', 'A campaign promise turns into a national compute purchasing program.', { money: 3, influence: 3, energy: 1 }, { compute: 3 }, { influence: 1, compute: 1 }, { policy: 4, capacity: 2 }, 5, 'policy', 'shock'),
+  c('university-lab-grant', 'University Lab Grant', 'Policy', 1, 'early', 'Cheap talent, expensive procurement.', { influence: 1 }, { compute: 1 }, { influence: 1 }, { policy: 1, moat: 1 }, 1, 'policy', 'boost'),
+  c('startup-allocation-lottery', 'Startup Allocation Lottery', 'Demand', 1, 'early', 'You won four boards and a cloud credit coupon.', { influence: 1, money: 1 }, { compute: 2, money: 1 }, undefined, { moat: 1 }, 1, 'cloud', 'boost'),
+  c('model-training-deadline', 'Ship the Model', 'Demand', 2, 'mid', 'The evals are weird, the launch date is real, and every cluster gets emptied.', { money: 2, compute: 2 }, { money: 2 }, undefined, { moat: 3 }, 2, 'cloud', 'seize'),
+  c('inference-optimization', 'Acquire vLLM Team', 'Software', 2, 'mid', 'The fastest kernel is the one you bought before lunch.', { compute: 2 }, { energy: 2 }, { money: 1 }, { moat: 2, grid: 1 }, 3, 'software', 'seize'),
+  c('scheduler-wizard', 'Scheduler Wizard', 'Software', 1, 'early', 'Utilization rises without buying another rack.', { money: 1, compute: 1 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'software', 'boost'),
+  c('power-cap-firmware', 'Power Cap Firmware', 'Energy', 1, 'early', 'Less clock, more cluster.', { compute: 1 }, { energy: 2 }, { energy: 1 }, { grid: 2 }, 1, 'power', 'boost'),
+  c('carbon-credit-swap', 'Carbon Credit Swap', 'Energy', 2, 'mid', 'A spreadsheet finds clean power in another county.', { money: 2, influence: 1 }, { energy: 1, influence: 1 }, undefined, { grid: 2, policy: 1 }, 2, 'power', 'shock'),
+  c('water-permit', 'Water Permit', 'Energy', 1, 'early', 'Cooling begins at the county office.', { influence: 1, money: 1 }, { energy: 1 }, { energy: 1 }, { grid: 1, policy: 1 }, 1, 'cooling', 'boost'),
+  c('heat-reuse-district', 'Heat Reuse District', 'Energy', 2, 'mid', 'Waste heat becomes political capital.', { money: 2, energy: 1 }, { influence: 2 }, { influence: 1 }, { grid: 2, policy: 2 }, 3, 'cooling', 'shock'),
+  c('open-source-compiler', 'Open Source Compiler', 'Software', 2, 'mid', 'The community finds performance you did not budget for.', { compute: 1, influence: 2 }, { compute: 1 }, { compute: 1 }, { moat: 2, policy: 1 }, 3, 'software', 'shock'),
+  c('vendor-lock-review', 'Vendor Lock Review', 'Policy', 2, 'mid', 'A procurement memo slows the leader down.', { influence: 2, compute: 1 }, { influence: 1 }, undefined, { policy: 2 }, 2, 'policy', 'destroy'),
+  c('antitrust-hearing', 'Antitrust Hearing Meltdown', 'Policy', 3, 'late', 'Every moat becomes a hearing exhibit and procurement teams freeze.', { influence: 4, money: 1 }, { influence: 2 }, undefined, { policy: 5, moat: -1 }, 4, 'policy', 'destroy'),
+  c('boardroom-pivot', 'Boardroom Pivot', 'Market', 2, 'mid', 'The company is an AI infrastructure business now.', { money: 2, influence: 1 }, { money: 1, energy: 1 }, undefined, { moat: 2, grid: 1 }, 2, 'market', 'shock'),
+  c('ipo-war-chest', 'Meme-Stock AI IPO', 'Market', 3, 'late', 'Retail euphoria becomes a war chest before lockup expires.', { money: 2, influence: 2 }, { money: 5 }, { money: 1 }, { moat: 3 }, 5, 'market', 'seize'),
+  c('crypto-demand-returns', 'Crypto Demand Returns', 'Demand', 2, 'mid', 'The bid stack gets weird again.', { energy: 2, money: 2 }, { money: 3 }, undefined, { moat: 1, grid: -1 }, 3, 'market', 'seize'),
+  c('sanctions-shock', 'China War Games Around Taiwan', 'Risk', 3, 'late', 'Joint Sword drills make every sourcing plan feel one headline away from failure.', { influence: 3, money: 2 }, { influence: 2, compute: 1 }, undefined, { policy: 4 }, 4, 'risk', 'destroy'),
+  c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { money: 3, compute: 1, energy: 1 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'seize'),
 ]
 
 export const EVENTS: EventCard[] = [
   { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -1. Gain +1 Influence.', costMod: { money: -1 }, incomeMod: { influence: 1 } },
   { id: 'tariff-whiplash', name: 'Tariff Whiplash', headline: 'The same shipment has three different prices.', rule: 'Money costs +1.', costMod: { money: 1 } },
   { id: 'asml-credential-leak', name: 'ASML Credential Leak', headline: 'A toolchain login becomes a board-level incident.', rule: 'Influence costs +1. Gain +1 Compute.', costMod: { influence: 1 }, incomeMod: { compute: 1 } },
-  { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Fabrication cards cannot be built unless they Hack.', blockedSuits: ['Fabrication'] },
-  { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Software cards cannot be built unless they Hack.', blockedSuits: ['Software'] },
+  { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Fabrication cards cannot be built this phase.', blockedSuits: ['Fabrication'] },
+  { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Software cards cannot be built this phase.', blockedSuits: ['Software'] },
   { id: 'hbm-sold-out', name: 'HBM Sold Out', headline: 'Memory vendors stop answering calls.', rule: 'Compute costs +1. Gain +1 Influence.', costMod: { compute: 1 }, incomeMod: { influence: 1 } },
   { id: 'power-price-spike', name: 'Power Price Spike', headline: 'The marginal megawatt gets ugly.', rule: 'Energy budget -1.', incomeMod: { energy: -1 } },
   { id: 'panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Gain +1 Money and +1 Compute.', incomeMod: { money: 1, compute: 1 } },

@@ -12,7 +12,7 @@ import {
   type Resource,
   type ResourceMap,
   type TrackMap,
-  addMaps,
+  continuesAfterBuild,
   emptyTracks,
   effectiveCost,
   productiveIncome,
@@ -174,12 +174,10 @@ function botFocusValue(player: Player, card: Card) {
   for (const resource of RESOURCES) {
     const focused = focus.has(resource)
     const cardIncome = income?.[resource] ?? 0
-    const cardGain = card.gain?.[resource] ?? 0
     const cardCost = card.cost[resource] ?? 0
 
     if (focused) {
       value += cardIncome * 9
-      value += cardGain * 4
       value += cardCost * 0.7
     } else {
       value -= cardCost * 2
@@ -192,13 +190,12 @@ function botFocusValue(player: Player, card: Card) {
 
 function botCardValue(room: Room, player: Player, card: Card) {
   const incomeValue = sumMap(productiveIncome(card))
-  const gainValue = sumMap(card.gain)
   const effectValue = card.effect
-    ? ({ chain: 11, disrupt: 8, hack: 9, raid: 8, scout: 6, surge: 9 } as Record<string, number>)[card.effect]
+    ? ({ boost: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
     : 0
   const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
 
-  return lateVpValue + incomeValue * 4 + gainValue * 2 + effectValue + botFocusValue(player, card)
+  return lateVpValue + incomeValue * 4 + effectValue + botFocusValue(player, card)
 }
 
 function fillMarket(room: Room) {
@@ -243,17 +240,22 @@ function cycleMarketCards(room: Room, cardIds: string[]) {
   return removed
 }
 
-function lowestVpMarketCards(room: Room, count: number) {
-  return [...room.game.market]
-    .sort((a, b) => {
-      const vpDiff = (cardsById.get(a)?.vp ?? 0) - (cardsById.get(b)?.vp ?? 0)
-      return vpDiff || room.game.market.indexOf(a) - room.game.market.indexOf(b)
-    })
-    .slice(0, count)
-}
-
 function highestVpMarketCard(room: Room) {
   return [...room.game.market].sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
+}
+
+function tableauVp(player: Player) {
+  return player.tableau.reduce((sum, cardId) => sum + (cardsById.get(cardId)?.vp ?? 0), 0)
+}
+
+function leaderTarget(room: Room, player: Player) {
+  return [...room.players]
+    .filter((candidate) => candidate.id !== player.id && candidate.tableau.length > 0)
+    .sort((a, b) => tableauVp(b) - tableauVp(a))[0]
+}
+
+function highestVpTableauCard(player: Player) {
+  return [...player.tableau].sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -331,47 +333,46 @@ function nextActive(room: Room) {
 
 function applyEffect(room: Room, player: Player, card: Card) {
   switch (card.effect) {
-    case 'scout':
-      cycleMarketCards(room, lowestVpMarketCards(room, 2))
-      player.resources.influence += 1
-      log(room, `${player.name} cycled the weak end of the market.`)
+    case 'boost':
+      log(room, `${player.name} doubled ${card.name}'s income output.`)
       break
-    case 'surge':
-      player.resources.money += 3
-      player.resources.compute += 2
-      player.resources.energy += 2
-      log(room, `${player.name} triggered a budget surge.`)
-      break
-    case 'raid': {
-      const taken = { money: 0, compute: 0 }
-      room.players.forEach((opponent) => {
-        if (opponent.id === player.id) return
-        if (opponent.resources.money > 0) {
-          opponent.resources.money -= 1
-          taken.money += 1
-        }
-        if (opponent.resources.compute > 0) {
-          opponent.resources.compute -= 1
-          taken.compute += 1
-        }
-      })
-      player.resources.money += taken.money
-      player.resources.compute += taken.compute
-      log(room, `${player.name} raided rivals for ${taken.money} Money and ${taken.compute} Compute.`)
+    case 'shock': {
+      const nextEventId = room.game.eventDeck.shift()
+      if (!nextEventId) {
+        log(room, `${player.name} tried to push the event deck, but no event was left.`)
+        break
+      }
+      room.game.event = nextEventId
+      const event = eventsById.get(nextEventId)
+      log(room, `${player.name} pushed the table into ${event?.name ?? 'a new event'}.`)
       break
     }
-    case 'disrupt': {
-      const target = highestVpMarketCard(room)
-      const removed = target ? cycleMarketCards(room, [target]) : []
-      log(room, removed.length ? `${player.name} trashed ${cardsById.get(removed[0])?.name} from the market.` : `${player.name} found no market card to disrupt.`)
+    case 'seize': {
+      const targetPlayer = leaderTarget(room, player)
+      const targetCard = targetPlayer ? highestVpTableauCard(targetPlayer) : undefined
+      if (!targetPlayer || !targetCard) {
+        log(room, `${player.name} found no rival card to seize.`)
+        break
+      }
+      targetPlayer.tableau = targetPlayer.tableau.filter((cardId) => cardId !== targetCard)
+      player.tableau.push(targetCard)
+      log(room, `${player.name} seized ${cardsById.get(targetCard)?.name} from ${targetPlayer.name}.`)
       break
     }
-    case 'chain':
-      log(room, `${player.name} opened a chain window.`)
+    case 'destroy': {
+      const targetPlayer = leaderTarget(room, player)
+      const targetCard = targetPlayer ? highestVpTableauCard(targetPlayer) : undefined
+      if (targetPlayer && targetCard) {
+        targetPlayer.tableau = targetPlayer.tableau.filter((cardId) => cardId !== targetCard)
+        room.game.discard.push(targetCard)
+        log(room, `${player.name} destroyed ${cardsById.get(targetCard)?.name} from ${targetPlayer.name}.`)
+        break
+      }
+      const marketTarget = highestVpMarketCard(room)
+      const removed = marketTarget ? cycleMarketCards(room, [marketTarget]) : []
+      log(room, removed.length ? `${player.name} destroyed ${cardsById.get(removed[0])?.name} from the market.` : `${player.name} found no card to destroy.`)
       break
-    case 'hack':
-      log(room, `${player.name} slipped through the event penalties.`)
-      break
+    }
   }
 }
 
@@ -384,15 +385,14 @@ function buildCard(room: Room, player: Player, cardId: string) {
   if (!canPay(player, cost)) return 'Not enough resources.'
 
   for (const resource of RESOURCES) player.resources[resource] -= cost[resource]
-  player.resources = addMaps(player.resources, card.gain)
 
   player.tableau.push(cardId)
   room.game.market = room.game.market.filter((id) => id !== cardId)
   fillMarket(room)
   applyEffect(room, player, card)
-  player.passed = card.effect !== 'chain'
+  player.passed = !continuesAfterBuild(card)
   log(room, `${player.name} built ${card.name}.`)
-  if (card.effect === 'chain') return
+  if (continuesAfterBuild(card)) return
   nextActive(room)
 }
 
@@ -448,9 +448,9 @@ io.on('connection', (socket) => {
       id: DEFAULT_ROOM_ID,
       hostId: socket.id,
       players: [
-        freshPlayer(socket.id, name),
-        freshPlayer('bot-supply-desk', 'Supply Desk', true, ['money', 'compute']),
-        freshPlayer('bot-policy-shop', 'Policy Shop', true, ['influence', 'energy']),
+        freshPlayer(socket.id, name || 'Green GPU Co.'),
+        freshPlayer('bot-red-accelerators', 'Red Accelerators', true, ['money', 'compute']),
+        freshPlayer('bot-blue-silicon', 'Blue Silicon', true, ['influence', 'energy']),
       ],
       game: newGame(),
     }

@@ -1,6 +1,6 @@
 # GPU Crunch
 
-GPU Crunch is a browser prototype for a 52-card tableau game about the semiconductor supply chain, AI infrastructure, export controls, power constraints, talent raids, and market panic.
+GPU Crunch is a browser prototype for a 52-card tableau game where rival GPU vendors race through the semiconductor supply chain, AI infrastructure buildouts, export controls, power constraints, talent raids, and market panic.
 
 The long-term goal is a physical board game. This repo is a fast browser sandbox for testing the deck, pacing, and balance before printing anything.
 
@@ -25,6 +25,7 @@ Players compete to build the strongest AI infrastructure tableau from a shared m
 - 5-card common market
 - Event deck of brief market shocks
 - Four resources: Money, Influence, Compute, Energy
+- Vendor seats: green, red, and blue GPU vendors with different resource focuses
 - Printed VP on cards
 
 ## Turn Structure
@@ -40,12 +41,14 @@ At the start of each phase:
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
-Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`. Hack cards ignore these locks.
+Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`.
 
 On your turn, choose one:
 
 - Build one card from the common market.
 - Scout: cycle the two leftmost market cards and take initiative next phase.
+
+Most builds end your turn for the phase.
 
 When a card is built:
 
@@ -67,16 +70,16 @@ Cards with 3+ VP are point cards:
 - They do not produce income.
 - Printed VP above 2 adds extra Money and Compute cost.
 
+Printed resource bonuses on cards below 3 VP count as income icons. They refresh every phase and do not accumulate.
+
 ## Broken Mechanics
 
-Every card belongs to one of six effect families:
+Every card belongs to one of four effect families:
 
-- Scout: cycle weak market cards and gain Influence.
-- Surge: gain a temporary burst of Money, Compute, and Energy.
-- Raid: steal Money and Compute from rivals.
-- Disrupt: trash the highest-VP market card.
-- Chain: immediately take another action.
-- Hack: ignore event cost penalties and reduce Money cost.
+- Boost: local buff that doubles that card's income icons.
+- Shock: global debuff manipulation that pushes the table into the next event.
+- Seize: take the highest-VP card from the current leader's tableau.
+- Destroy: trash the highest-VP card from the current leader's tableau, or from the market if no leader has cards.
 
 The design principle is that every card should feel unfair in a concrete way, while the public market gives opponents a chance to race, deny, or punish it.
 

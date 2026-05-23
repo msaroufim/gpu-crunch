@@ -2,6 +2,7 @@ import {
   CARDS,
   EVENTS,
   RESOURCES,
+  continuesAfterBuild,
   effectRules,
   effectiveCost,
   productiveIncome,
@@ -173,17 +174,22 @@ function cycleMarketCards(game: Game, cardIds: string[]) {
   return removed
 }
 
-function lowestVpMarketCards(game: Game, count: number) {
-  return [...game.market]
-    .sort((a, b) => {
-      const vpDiff = cards.get(a)!.vp - cards.get(b)!.vp
-      return vpDiff || game.market.indexOf(a) - game.market.indexOf(b)
-    })
-    .slice(0, count)
-}
-
 function highestVpMarketCard(game: Game) {
   return [...game.market].sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
+}
+
+function tableauVp(player: Player) {
+  return player.tableau.reduce((sum, cardId) => sum + cards.get(cardId)!.vp, 0)
+}
+
+function leaderTarget(players: Player[], player: Player) {
+  return [...players]
+    .filter((candidate) => candidate !== player && candidate.tableau.length > 0)
+    .sort((a, b) => tableauVp(b) - tableauVp(a))[0]
+}
+
+function highestVpTableauCard(player: Player) {
+  return [...player.tableau].sort((a, b) => cards.get(b)!.vp - cards.get(a)!.vp)[0]
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -215,12 +221,10 @@ function focusValue(card: Card, strategy: Strategy, round: number) {
   for (const resource of RESOURCES) {
     const weight = weights[resource] ?? 0
     const cardIncome = income?.[resource] ?? 0
-    const cardGain = card.gain?.[resource] ?? 0
     const cardCost = card.cost[resource] ?? 0
 
     if (weight > 0) {
       value += cardIncome * weight * (round <= 6 ? 5 : 2)
-      value += cardGain * weight * 2
       value += cardCost * 0.6
     } else {
       value -= cardCost * 1.8
@@ -233,23 +237,22 @@ function focusValue(card: Card, strategy: Strategy, round: number) {
 
 function cardValue(card: Card, strategy: Strategy, round: number) {
   const incomeValue = sumMap(productiveIncome(card))
-  const gainValue = sumMap(card.gain)
   const effectValue = card.effect
-    ? ({ chain: 11, disrupt: 8, hack: 9, raid: 8, scout: 6, surge: 9 } as Record<string, number>)[card.effect]
+    ? ({ boost: 8, shock: 9, seize: 14, destroy: 11 } as Record<string, number>)[card.effect]
     : 0
   const earlyIncome = round <= 4 ? incomeValue * 5 : incomeValue * 2
   const lateVp = round >= 7 ? card.vp * 7 : card.vp * 4
-  const base = lateVp + earlyIncome + gainValue + effectValue
+  const base = lateVp + earlyIncome + effectValue
 
   switch (strategy) {
     case 'engine':
-      return card.vp * 2 + incomeValue * (round <= 6 ? 8 : 2) + gainValue * 2 + effectValue
+      return card.vp * 2 + incomeValue * (round <= 6 ? 8 : 2) + effectValue
     case 'vp':
       return card.vp * (round <= 5 ? 6 : 9) + incomeValue + effectValue * 0.5
     case 'effects':
       return base + effectValue * 2
     case 'scout':
-      return base + (card.effect === 'scout' ? 8 : 0) + incomeValue
+      return base + (card.effect === 'shock' ? 8 : 0) + incomeValue
     case 'moneyCompute':
     case 'influenceEnergy':
     case 'computeEnergy':
@@ -264,21 +267,6 @@ function cardValue(card: Card, strategy: Strategy, round: number) {
   }
 }
 
-function projectedBudgetAfterBuild(player: Player, card: Card, event?: EventCard): ResourceMap {
-  const budget = { ...player.budget }
-  const cardCost = cost(card, event)
-  for (const resource of RESOURCES) budget[resource] -= cardCost[resource]
-  addBudget(budget, card.gain)
-  if (card.effect === 'surge') addBudget(budget, { money: 3, compute: 2, energy: 2 })
-  if (card.effect === 'raid') addBudget(budget, { money: 2, compute: 2 })
-  return budget
-}
-
-function canPayWithBudget(budget: ResourceMap, card: Card, event?: EventCard) {
-  const cardCost = cost(card, event)
-  return RESOURCES.every((resource) => budget[resource] >= cardCost[resource])
-}
-
 function sharkCardValue(game: Game, players: Player[], player: Player, card: Card) {
   const remaining = Math.max(1, 9 - game.round)
   const income = productiveIncome(card)
@@ -291,32 +279,25 @@ function sharkCardValue(game: Game, players: Player[], player: Player, card: Car
         (income?.influence ?? 0) * remaining * 1.3 +
         (income?.energy ?? 0) * remaining * 1.2
       : sumMap(income) * 0.8
-  const gainValue =
-    (card.gain?.money ?? 0) * 1.5 +
-    (card.gain?.compute ?? 0) * 2.1 +
-    (card.gain?.influence ?? 0) * 1.2 +
-    (card.gain?.energy ?? 0) * 1.1
   const vpValue = card.vp * (game.round >= 5 ? 18 : 10) + card.vp * card.vp * 2 + (card.vp >= 3 ? 8 : 0)
-  const postBudget = projectedBudgetAfterBuild(player, card, game.event)
-  const followups = game.market
-    .filter((id) => id !== card.id)
-    .map((id) => cards.get(id)!)
-    .filter((candidate) => canPayWithBudget(postBudget, candidate, game.event))
-  const bestFollowup = followups.reduce((best, candidate) => Math.max(best, candidate.vp * 9 + sumMap(productiveIncome(candidate)) * remaining), 0)
   const nextOpponent = players[(players.indexOf(player) + 1) % players.length]
   const denial = nextOpponent && canPay(nextOpponent, card, game.event) ? card.vp * 6 + sumMap(productiveIncome(card)) * Math.min(remaining, 3) : 0
   const highMarket = highestVpMarketCard(game)
   const disruptTarget = highMarket ? cards.get(highMarket)! : undefined
+  const leader = [...players]
+    .filter((rival) => rival !== player && rival.tableau.length > 0)
+    .sort((a, b) => b.tableau.reduce((sum, id) => sum + cards.get(id)!.vp, 0) - a.tableau.reduce((sum, id) => sum + cards.get(id)!.vp, 0))[0]
+  const leaderBest = leader
+    ? Math.max(...leader.tableau.map((id) => cards.get(id)!.vp))
+    : 0
   const effectValue =
-    card.effect === 'chain' ? 7 + bestFollowup * 0.25 :
-    card.effect === 'surge' ? 7 + bestFollowup * 0.18 :
-    card.effect === 'raid' ? 6 + players.filter((rival) => rival !== player && (rival.budget.money > 0 || rival.budget.compute > 0)).length * 2 :
-    card.effect === 'disrupt' ? (disruptTarget && disruptTarget.id !== card.id ? 5 + disruptTarget.vp * 3 : 2) :
-    card.effect === 'hack' ? 5 + sumMap(game.event?.costMod) :
-    card.effect === 'scout' ? 3 + Math.max(0, 3 - game.market.reduce((sum, id) => sum + cards.get(id)!.vp, 0) / Math.max(1, game.market.length)) * 2 :
+    card.effect === 'boost' ? 8 + incomeValue * 0.5 :
+    card.effect === 'shock' ? 8 + sumMap(game.event?.costMod) :
+    card.effect === 'seize' ? 9 + leaderBest * 5 :
+    card.effect === 'destroy' ? (leaderBest ? 7 + leaderBest * 4 : disruptTarget && disruptTarget.id !== card.id ? 5 + disruptTarget.vp * 3 : 2) :
     0
 
-  return (learnedPower[card.id] ?? 0) + vpValue + incomeValue + gainValue + effectValue + denial - costPressure * 0.45
+  return (learnedPower[card.id] ?? 0) + vpValue + incomeValue + effectValue + denial - costPressure * 0.45
 }
 
 function chooseBuild(game: Game, players: Player[], player: Player, playable: Card[]) {
@@ -334,42 +315,32 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
   game.effectBuilds += 1
   player.effectBuilds += 1
   switch (card.effect) {
-    case 'scout':
-      cycleMarketCards(game, lowestVpMarketCards(game, 2))
-      player.budget.influence += 1
+    case 'boost':
       break
-    case 'surge':
-      player.budget.money += 3
-      player.budget.compute += 2
-      player.budget.energy += 2
-      break
-    case 'raid': {
-      let money = 0
-      let compute = 0
-      for (const rival of players) {
-        if (rival === player) continue
-        if (rival.budget.money > 0) {
-          rival.budget.money -= 1
-          money += 1
-        }
-        if (rival.budget.compute > 0) {
-          rival.budget.compute -= 1
-          compute += 1
-        }
-      }
-      player.budget.money += money
-      player.budget.compute += compute
+    case 'shock': {
+      const nextEvent = game.events.shift()
+      if (nextEvent) game.event = events.get(nextEvent)
       break
     }
-    case 'disrupt':
+    case 'seize': {
+      const target = leaderTarget(players, player)
+      const targetCard = target ? highestVpTableauCard(target) : undefined
+      if (!target || !targetCard) break
+      target.tableau = target.tableau.filter((cardId) => cardId !== targetCard)
+      player.tableau.push(targetCard)
+      break
+    }
+    case 'destroy': {
+      const target = leaderTarget(players, player)
+      const targetCard = target ? highestVpTableauCard(target) : undefined
+      if (target && targetCard) {
+        target.tableau = target.tableau.filter((cardId) => cardId !== targetCard)
+        game.discard.push(targetCard)
+        break
+      }
       cycleMarketCards(game, [highestVpMarketCard(game)].filter(Boolean))
       break
-    case 'chain':
-      game.chains += 1
-      player.passed = false
-      break
-    case 'hack':
-      break
+    }
   }
 }
 
@@ -377,13 +348,12 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
   const card = cards.get(cardId)!
   const cardCost = cost(card, game.event)
   for (const resource of RESOURCES) player.budget[resource] -= cardCost[resource]
-  addBudget(player.budget, card.gain)
   addBudget(player.incomeBuilt, productiveIncome(card))
   game.market = game.market.filter((id) => id !== cardId)
   fillMarket(game)
   player.tableau.push(cardId)
   player.buildsByEra[card.era] += 1
-  player.passed = card.effect !== 'chain'
+  player.passed = !continuesAfterBuild(card)
   applyEffect(game, players, player, card)
   if (writeLog) {
     game.log.push(
@@ -461,7 +431,7 @@ function startNextRound(game: Game, players: Player[]) {
 function rolloutBuild(game: Game, players: Player[], player: Player, playable: Card[]) {
   const best = playable.sort((a, b) => sharkCardValue(game, players, player, b) - sharkCardValue(game, players, player, a))[0]
   const built = build(game, players, player, best.id, false)
-  if (built.effect !== 'chain') nextActive(game, players)
+  if (!continuesAfterBuild(built)) nextActive(game, players)
 }
 
 function simulateToEnd(game: Game, players: Player[]) {
@@ -491,7 +461,7 @@ function apexCardValue(game: Game, players: Player[], player: Player, card: Card
   const playerClones = clonePlayers(players)
   const activeClone = playerClones[playerIndex]
   const built = build(gameClone, playerClones, activeClone, card.id, false)
-  if (built.effect !== 'chain') nextActive(gameClone, playerClones)
+  if (!continuesAfterBuild(built)) nextActive(gameClone, playerClones)
   simulateToEnd(gameClone, playerClones)
   const selfScore = playerClones[playerIndex].score
   const rivalScore = Math.max(...playerClones.filter((_, index) => index !== playerIndex).map((rival) => rival.score))
@@ -558,7 +528,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
       } else {
         const best = chooseBuild(game, players, player, playable)
         const built = build(game, players, player, best.id)
-        if (built.effect === 'chain') continue
+        if (continuesAfterBuild(built)) continue
       }
       nextActive(game, players)
     }

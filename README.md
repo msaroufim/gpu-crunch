@@ -38,7 +38,7 @@ At the start of each phase:
 - Budget equals base resources plus income icons from built cards, modified by the event.
 - Unspent resources from prior phases are gone.
 
-Events are separate from the 52-card deck. They are short global shocks like `Tariff Whiplash`, `ASML Credential Leak`, `Engineer Poaching War`, and `Power Price Spike`.
+Events are separate from the 52-card deck. For now the prototype uses 8 short event cards so players can shuffle one small event deck. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 
 Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`. Hack cards ignore these locks.
 

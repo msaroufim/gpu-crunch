@@ -532,7 +532,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
     deck: weightedDeck(random),
     market: [],
     discard: [],
-    events: shuffle(EVENTS.map((event) => event.id), random).slice(0, 10),
+    events: shuffle(EVENTS.map((event) => event.id), random).slice(0, 8),
     active: 0,
     round: 0,
     log: [],

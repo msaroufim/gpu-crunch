@@ -6,6 +6,7 @@ import { Server } from 'socket.io'
 import {
   CARDS,
   EVENTS,
+  MARKET_SIZE,
   RESOURCES,
   OPENING_MARKET_CARD_IDS,
   type Card,
@@ -220,7 +221,7 @@ function botCardValue(room: Room, player: Player, card: Card) {
 }
 
 function fillMarket(room: Room) {
-  while (room.game.market.length < 5) {
+  while (room.game.market.length < MARKET_SIZE) {
     const cardId = room.game.deck.shift()
     if (!cardId) break
     room.game.market.push(cardId)

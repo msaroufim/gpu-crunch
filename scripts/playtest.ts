@@ -1,6 +1,7 @@
 import {
   CARDS,
   EVENTS,
+  MARKET_SIZE,
   RESOURCES,
   OPENING_MARKET_CARD_IDS,
   continuesAfterBuild,
@@ -41,6 +42,12 @@ type Player = {
   incomeBuilt: ResourceMap
 }
 
+type PlayableSample = {
+  round: number
+  strategy: Strategy
+  count: number
+}
+
 type Game = {
   deck: string[]
   market: string[]
@@ -52,6 +59,7 @@ type Game = {
   log: string[]
   priorityPlayer?: string
   playableCounts: number[]
+  playableSamples: PlayableSample[]
   effectBuilds: number
   scouts: number
   chains: number
@@ -144,7 +152,7 @@ function resetBudget(game: Game, player: Player) {
 }
 
 function fillMarket(game: Game) {
-  while (game.market.length < 5) {
+  while (game.market.length < MARKET_SIZE) {
     const card = game.deck.shift()
     if (!card) break
     game.market.push(card)
@@ -346,6 +354,7 @@ function cloneGame(game: Game): Game {
     log: [],
     priorityPlayer: game.priorityPlayer,
     playableCounts: [],
+    playableSamples: [],
     effectBuilds: game.effectBuilds,
     scouts: game.scouts,
     chains: game.chains,
@@ -464,6 +473,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
     round: 0,
     log: [],
     playableCounts: [],
+    playableSamples: [],
     effectBuilds: 0,
     scouts: 0,
     chains: 0,
@@ -480,6 +490,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
       const player = players[game.active]
       const playable = game.market.map((id) => cards.get(id)!).filter((card) => canPay(player, card, game.event))
       game.playableCounts.push(playable.length)
+      game.playableSamples.push({ round: game.round, strategy: player.strategy, count: playable.length })
       if (shouldScout(player, playable, game.round)) {
         scout(game, players, player)
       } else {
@@ -506,11 +517,82 @@ function summarizeSingle(seed: number) {
     )
   }
   const avgPlayable = game.playableCounts.reduce((sum, count) => sum + count, 0) / game.playableCounts.length
+  const zeroChoice = game.playableCounts.filter((count) => count === 0).length
+  const oneOrLess = game.playableCounts.filter((count) => count <= 1).length
   console.log(
     `\nSignals: ${game.scouts} scouts, ${game.effectBuilds} effect builds, ${game.chains} chains, ${avgPlayable.toFixed(
       2,
-    )} playable cards per decision.`,
+    )} playable cards per decision, ${(100 * oneOrLess / game.playableCounts.length).toFixed(1)}% decisions at 0-1 options, ${(100 * zeroChoice / game.playableCounts.length).toFixed(1)}% at 0 options.`,
   )
+}
+
+function emptyOptionBucket() {
+  return {
+    decisions: 0,
+    optionSum: 0,
+    zero: 0,
+    one: 0,
+    twoPlus: 0,
+    threePlus: 0,
+  }
+}
+
+type OptionBucket = ReturnType<typeof emptyOptionBucket>
+
+function addOptionSample(bucket: OptionBucket, count: number) {
+  bucket.decisions += 1
+  bucket.optionSum += count
+  if (count === 0) bucket.zero += 1
+  if (count === 1) bucket.one += 1
+  if (count >= 2) bucket.twoPlus += 1
+  if (count >= 3) bucket.threePlus += 1
+}
+
+function optionLine(label: string, bucket: OptionBucket) {
+  const n = bucket.decisions || 1
+  return `${label}: avg ${(bucket.optionSum / n).toFixed(2)}, 0 ${(100 * bucket.zero / n).toFixed(1)}%, 1 ${(100 * bucket.one / n).toFixed(1)}%, 0-1 ${(100 * (bucket.zero + bucket.one) / n).toFixed(1)}%, 2+ ${(100 * bucket.twoPlus / n).toFixed(1)}%, 3+ ${(100 * bucket.threePlus / n).toFixed(1)}% (${bucket.decisions} decisions)`
+}
+
+function summarizeOptions(games: number) {
+  const strategies: Strategy[] = [
+    'balanced',
+    'engine',
+    'vp',
+    'effects',
+    'scout',
+    'moneyCompute',
+    'influenceEnergy',
+    'computeEnergy',
+    'moneyInfluence',
+    'shark',
+    'apex',
+  ]
+  const overall = emptyOptionBucket()
+  const byRound = Object.fromEntries(Array.from({ length: 8 }, (_, index) => [index + 1, emptyOptionBucket()])) as Record<number, OptionBucket>
+  const byStrategy = Object.fromEntries(strategies.map((strategy) => [strategy, emptyOptionBucket()])) as Record<Strategy, OptionBucket>
+
+  for (let seed = 1; seed <= games; seed += 1) {
+    const lineup = [strategies[(seed - 1) % strategies.length], strategies[seed % strategies.length], strategies[(seed + 1) % strategies.length]]
+    const { game } = play(seed, lineup)
+    for (const sample of game.playableSamples) {
+      addOptionSample(overall, sample.count)
+      addOptionSample(byRound[sample.round], sample.count)
+      addOptionSample(byStrategy[sample.strategy], sample.count)
+    }
+  }
+
+  console.log(`Simulated ${games} games for playable-option pressure.`)
+  console.log(optionLine('overall', overall))
+
+  console.log('\nBy phase:')
+  for (const round of Object.keys(byRound).map(Number).sort((a, b) => a - b)) {
+    console.log(optionLine(`phase ${round}`, byRound[round]))
+  }
+
+  console.log('\nBy strategy:')
+  for (const strategy of strategies) {
+    console.log(optionLine(strategy, byStrategy[strategy]))
+  }
 }
 
 function summarizeBatch(games: number) {
@@ -800,4 +882,5 @@ if (mode === 'batch') summarizeBatch(Number(process.argv[3] ?? 100))
 else if (mode === 'duel') summarizeDuelBatch(Number(process.argv[3] ?? 50))
 else if (mode === 'cards') summarizeCardStats(Number(process.argv[3] ?? 1000))
 else if (mode === 'mirror') summarizeApexMirror(Number(process.argv[3] ?? 500))
+else if (mode === 'options') summarizeOptions(Number(process.argv[3] ?? 500))
 else summarizeSingle(Number(mode))

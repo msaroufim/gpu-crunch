@@ -54,6 +54,7 @@ export type EventCard = {
 
 export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
 export const TRACKS: Track[] = ['capacity', 'policy', 'grid', 'moat']
+export const MARKET_SIZE = 11
 
 export const resourceLabels: Record<Resource, string> = {
   money: 'Money',
@@ -139,11 +140,7 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   for (const resource of RESOURCES) {
     const eventMod = event?.costMod?.[resource] ?? 0
     const premium = resourcePremium(resource, vpPremium) + resourcePremium(resource, priorityPremium)
-    const effectPremium =
-      card.effect === 'shock' && card.tier >= 2 && resource === 'influence'
-          ? 1
-          : 0
-    cost[resource] = Math.max(0, (card.cost[resource] ?? 0) + eventMod + premium + effectPremium)
+    cost[resource] = Math.max(0, (card.cost[resource] ?? 0) + eventMod + premium)
   }
   return cost
 }
@@ -212,8 +209,8 @@ export const CARDS: Card[] = [
   c('earthquake-insurance', 'Foundry Earthquake Insurance', 'Risk', 1, 'early', 'You cannot stop the quake, but you can buy resilience.', {}, { influence: 1 }, { money: 1 }, { policy: 1, capacity: 1 }, 1, 'risk', undefined, true),
   c('port-strike-buffer', 'Port Strike Buffer', 'Risk', 1, 'early', 'Inventory is inefficient until it saves you.', { money: 2 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'risk'),
   c('dram-price-spike', 'DRAM Price Spike', 'Memory', 2, 'mid', 'A bad quarter for buyers, a great quarter for you.', { money: 2, influence: 1 }, { money: 3 }, undefined, { moat: 2 }, 2, 'memory', 'shock'),
-  c('networking-fabric', 'Networking Fabric', 'Cluster', 2, 'mid', 'The GPUs were never the whole cluster.', { money: 3, compute: 1 }, { compute: 1 }, { compute: 1 }, { capacity: 2, moat: 1 }, 2, 'network', 'priority'),
-  c('infiniband-switch', 'InfiniBand Switch', 'Cluster', 2, 'mid', 'Latency is a resource if you can monopolize it.', { money: 3, energy: 1 }, undefined, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'network'),
+  c('networking-fabric', 'Networking Fabric', 'Cluster', 2, 'mid', 'The GPUs were never the whole cluster.', { compute: 2, energy: 1 }, { compute: 1 }, { compute: 1 }, { capacity: 2, moat: 1 }, 2, 'network', 'priority'),
+  c('infiniband-switch', 'InfiniBand Switch', 'Cluster', 2, 'mid', 'Latency is a resource if you can monopolize it.', { compute: 1, energy: 2 }, undefined, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'network'),
   c('firmware-miracle', 'Firmware Miracle', 'Software', 1, 'early', 'The same silicon gets a better story.', {}, { compute: 1, energy: 1 }, undefined, { moat: 1 }, 1, 'software', undefined, true),
   c('chiplet-yield-fix', 'Chiplet Yield Fix', 'Silicon', 2, 'mid', 'A package-level fix turns scraps into margin.', { money: 3, compute: 1 }, { money: 1, compute: 1 }, { money: 1 }, { capacity: 2, moat: 1 }, 2, 'package'),
   c('silicon-photonics-bet', 'Secret Photonics Breakthrough', 'Cluster', 3, 'late', 'The lab demo works once and the board decides once is enough.', { money: 3, compute: 1, influence: 1 }, { compute: 3 }, { compute: 1 }, { capacity: 3, moat: 3 }, 5, 'network', 'shock'),
@@ -221,7 +218,7 @@ export const CARDS: Card[] = [
   c('university-lab-grant', 'University Lab Grant', 'Policy', 1, 'early', 'Cheap talent, expensive procurement.', { influence: 1 }, { compute: 1 }, { influence: 1 }, { policy: 1, moat: 1 }, 1, 'policy', 'priority'),
   c('startup-allocation-lottery', 'Startup Allocation Lottery', 'Demand', 1, 'early', 'You won four boards and a cloud credit coupon.', { influence: 1, money: 1 }, { compute: 2, money: 1 }, undefined, { moat: 1 }, 1, 'cloud', 'priority'),
   c('model-training-deadline', 'Ship the Model', 'Demand', 2, 'mid', 'The evals are weird, the launch date is real, and every cluster gets emptied.', { money: 2, compute: 2 }, { money: 2 }, undefined, { moat: 3 }, 2, 'cloud', 'priority'),
-  c('inference-optimization', 'Acquire vLLM Team', 'Software', 2, 'mid', 'The fastest kernel is the one you bought before lunch.', { compute: 2 }, { energy: 2 }, { money: 1 }, { moat: 2, grid: 1 }, 3, 'software', 'priority'),
+  c('inference-optimization', 'Acquire vLLM Team', 'Software', 2, 'mid', 'The fastest kernel is the one you bought before lunch.', { compute: 2, energy: 1 }, { energy: 2 }, { money: 1 }, { moat: 2, grid: 1 }, 2, 'software', 'priority'),
   c('scheduler-wizard', 'Scheduler Wizard', 'Software', 1, 'early', 'Utilization rises without buying another rack.', { compute: 1 }, { compute: 1 }, undefined, { capacity: 1, moat: 1 }, 1, 'software', 'priority'),
   c('power-cap-firmware', 'Power Cap Firmware', 'Energy', 1, 'early', 'Less clock, more cluster.', { compute: 1 }, { energy: 2 }, { energy: 1 }, { grid: 2 }, 1, 'power'),
   c('carbon-credit-swap', 'Carbon Credit Swap', 'Energy', 2, 'mid', 'A spreadsheet finds clean power in another county.', { money: 2, influence: 1 }, { energy: 1, influence: 1 }, undefined, { grid: 2, policy: 1 }, 2, 'power', 'shock'),
@@ -234,7 +231,7 @@ export const CARDS: Card[] = [
   c('ipo-war-chest', 'Meme-Stock AI IPO', 'Market', 3, 'late', 'Retail euphoria becomes a war chest before lockup expires.', { money: 2, influence: 2 }, { money: 5 }, { money: 1 }, { moat: 3 }, 5, 'market', 'priority'),
   c('crypto-demand-returns', 'Crypto Demand Returns', 'Demand', 2, 'mid', 'The bid stack gets weird again.', { compute: 2, energy: 2 }, { money: 3 }, undefined, { moat: 1, grid: -1 }, 3, 'market', 'shock'),
   c('sanctions-shock', 'China War Games Around Taiwan', 'Risk', 3, 'late', 'Joint Sword drills make every sourcing plan feel one headline away from failure.', { influence: 3, money: 2 }, { influence: 2, compute: 1 }, undefined, { policy: 4 }, 4, 'risk', 'shock'),
-  c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { money: 3, compute: 1, energy: 1 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'priority'),
+  c('grace-cpu-bundle', 'Grace CPU Bundle', 'Silicon', 2, 'mid', 'The accelerator sale now comes with the rest of the box.', { compute: 2, energy: 2 }, { compute: 1, money: 1 }, { compute: 1 }, { capacity: 2, moat: 2 }, 3, 'fab', 'priority'),
 ]
 
 export const OPENING_MARKET_CARD_IDS = [

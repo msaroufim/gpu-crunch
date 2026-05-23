@@ -22,7 +22,7 @@ Players compete to build the strongest AI infrastructure tableau from a shared m
 ## Components
 
 - 52-card deck
-- 5-card common market
+- 11-card common market
 - Event deck of brief market shocks
 - Four resources: Money, Influence, Compute, Energy
 - Vendor seats: green, red, and blue GPU vendors with different resource focuses
@@ -40,7 +40,7 @@ At the start of each phase:
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
 
-Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards that cost nothing, so the first turns are about choosing one starter card at a time. Each starter opens a small tech branch:
+Players start with no tableau and 0 resources. The opening market is seeded with five `START` cards plus six normal deck cards, so the first turns are about choosing one starter card at a time while seeing early branches. Each starter opens a small tech branch:
 
 - `Substrate Supplier`: Money + Compute.
 - `Firmware Miracle`: Compute + Energy.
@@ -69,7 +69,7 @@ When a card is built:
 - Pay its visible cost.
 - Add it to your tableau.
 - Resolve its immediate effect.
-- Refill the market back to 5 cards.
+- Refill the market back to 11 cards.
 
 After every player has acted, the next phase begins.
 
@@ -138,6 +138,7 @@ npm run playtest -- batch 1000
 npm run playtest -- duel 50
 npm run playtest -- cards 1000
 npm run playtest -- mirror 500
+npm run playtest -- options 500
 ```
 
 Useful modes:
@@ -146,6 +147,7 @@ Useful modes:
 - `duel`: 2-player strategy tournament.
 - `cards`: ranks cards by winner picks and win rate when built.
 - `mirror`: Apex AI vs Apex AI for best-card analysis under strong play.
+- `options`: measures how often players have 0, 1, 2+, or 3+ legal market choices by phase and strategy.
 
 The strongest simulator agent is `apex`, a rollout-based AI that tests legal market builds by simulating the rest of the game and choosing the best final score margin.
 

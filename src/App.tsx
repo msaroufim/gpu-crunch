@@ -510,7 +510,7 @@ function MarketRow({
             return (
               <div className={`market-empty-slot ${starterSlot ? 'starter-empty-slot' : ''}`} key={`empty-${index}`}>
                 <span>{starterSlot ? 'Starter empty' : 'Empty slot'}</span>
-                <p>{starterSlot ? 'Starter supply is gone.' : 'Scout refills main supply.'}</p>
+            <p>{starterSlot ? 'Starter supply is gone.' : 'Scout refreshes this shop.'}</p>
               </div>
             )
           }
@@ -743,7 +743,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>
             <p>Scout only when you hate every build or need Priority. Most turns should build a card.</p>
-            <p>The market refills automatically as phases advance. Scout skips your build, refills main supply faster, and can claim Priority.</p>
+            <p>The shop is capped at 12 cards. Scout skips your build, refreshes the 8 main shop slots, and can claim Priority.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>

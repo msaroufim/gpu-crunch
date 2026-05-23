@@ -14,7 +14,6 @@ import {
   OPENING_MARKET_CARD_IDS,
   OPENING_MAIN_CARD_IDS,
   isStarterCardId,
-  phaseSupplyRefill,
   type Card,
   type EventCard,
   type Resource,
@@ -269,16 +268,24 @@ function seedOpeningMarket(room: Room) {
   })
 }
 
-function fillEmptyMarketSlots(room: Room, limit = SCOUT_REFILL_SIZE) {
-  let filled = 0
-  for (let index = STARTER_MARKET_SIZE; index < room.game.market.length && filled < limit; index += 1) {
-    if (room.game.market[index] !== null) continue
-    const nextCard = room.game.deck.shift()
-    if (!nextCard) break
-    room.game.market[index] = nextCard
-    filled += 1
+function drawMarketCard(room: Room) {
+  if (room.game.deck.length === 0 && room.game.discard.length > 0) {
+    room.game.deck = shuffle(room.game.discard)
+    room.game.discard = []
   }
-  return filled
+  return room.game.deck.shift() ?? null
+}
+
+function refreshMainMarket(room: Room) {
+  let refreshed = 0
+  for (let index = STARTER_MARKET_SIZE; index < room.game.market.length && refreshed < SCOUT_REFILL_SIZE; index += 1) {
+    const existing = room.game.market[index]
+    if (existing) room.game.discard.push(existing)
+    const nextCard = drawMarketCard(room)
+    room.game.market[index] = nextCard
+    if (nextCard) refreshed += 1
+  }
+  return refreshed
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -302,7 +309,6 @@ function startRound(room: Room) {
   game.event = game.round === 1
     ? null
     : game.eventDeck.shift() ?? shuffle(EVENTS.map((event) => event.id))[0]
-  const refilled = fillEmptyMarketSlots(room, phaseSupplyRefill(game.round))
   const event = currentEvent(room)
   room.players.forEach((player) => {
     player.passed = false
@@ -317,7 +323,7 @@ function startRound(room: Room) {
     player.initiative = false
   })
   game.priorityPlayerId = null
-  log(room, `Phase ${game.round}: ${event?.name ?? 'Opening Draft'} is active${refilled ? `, market refills ${refilled}` : ''}.`)
+  log(room, `Phase ${game.round}: ${event?.name ?? 'Opening Draft'} is active.`)
 }
 
 function startGame(room: Room) {
@@ -414,20 +420,20 @@ function buildCard(room: Room, player: Player, cardId: string) {
 }
 
 function startScout(room: Room, player: Player) {
-  const filledSlots = fillEmptyMarketSlots(room)
+  const refreshedSlots = refreshMainMarket(room)
   const claimedPriority = claimPriority(room, player)
   player.actionsThisPhase += 1
   player.actionsTaken += 1
   player.passed = true
   log(
     room,
-    filledSlots > 0
+    refreshedSlots > 0
       ? claimedPriority
-        ? `${player.name} scouted, filled ${filledSlots} empty market slots, and took next-phase initiative.`
-        : `${player.name} scouted and filled ${filledSlots} empty market slots. Priority Card was already claimed.`
+        ? `${player.name} scouted, refreshed ${refreshedSlots} shop slots, and took next-phase initiative.`
+        : `${player.name} scouted and refreshed ${refreshedSlots} shop slots. Priority Card was already claimed.`
       : claimedPriority
-        ? `${player.name} scouted, found no empty market slots to fill, and took next-phase initiative.`
-        : `${player.name} scouted but found no empty market slots to fill. Priority Card was already claimed.`,
+        ? `${player.name} scouted, found no new shop cards, and took next-phase initiative.`
+        : `${player.name} scouted but found no new shop cards. Priority Card was already claimed.`,
   )
   nextActive(room)
 }

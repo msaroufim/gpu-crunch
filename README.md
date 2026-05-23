@@ -64,7 +64,7 @@ Players start with no tableau and 0 resources. The first four market slots are p
 - `Stock Buyback`: Money lane. Turns into analyst hype, market pivots, panic buys, and IPO/war-chest plays.
 - `Lobby`: Influence lane. Turns into export licenses, tariff routing, sovereign AI deals, and government superclusters.
 
-The other 8 market slots begin with two follow-up cards per lane. As phases advance, the market automatically refills more empty main-market slots; Scout still refills main supply faster and claims Priority.
+The shop is capped at 12 cards: 4 permanent starter lanes plus 8 main shop cards. Scout refreshes the 8 main shop cards from the deck and can claim Priority.
 
 Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals an 11-phase crisis queue after the opening draft by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
 

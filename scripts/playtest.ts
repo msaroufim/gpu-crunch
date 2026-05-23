@@ -12,7 +12,6 @@ import {
   effectRules,
   effectiveCost,
   isStarterCardId,
-  phaseSupplyRefill,
   productiveIncome,
   shockEventForCard,
   type Card,
@@ -206,16 +205,24 @@ function seedOpeningMarket(game: Game) {
   })
 }
 
-function fillEmptyMarketSlots(game: Game, limit = SCOUT_REFILL_SIZE) {
-  let filled = 0
-  for (let index = STARTER_MARKET_SIZE; index < game.market.length && filled < limit; index += 1) {
-    if (game.market[index] !== null) continue
-    const nextCard = game.deck.shift()
-    if (!nextCard) break
-    game.market[index] = nextCard
-    filled += 1
+function drawMarketCard(game: Game) {
+  if (game.deck.length === 0 && game.discard.length > 0) {
+    game.deck = [...game.discard]
+    game.discard = []
   }
-  return filled
+  return game.deck.shift() ?? null
+}
+
+function refreshMainMarket(game: Game) {
+  let refreshed = 0
+  for (let index = STARTER_MARKET_SIZE; index < game.market.length && refreshed < SCOUT_REFILL_SIZE; index += 1) {
+    const existing = game.market[index]
+    if (existing) game.discard.push(existing)
+    const nextCard = drawMarketCard(game)
+    game.market[index] = nextCard
+    if (nextCard) refreshed += 1
+  }
+  return refreshed
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -376,19 +383,19 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
 }
 
 function scout(game: Game, players: Player[], player: Player) {
-  const filledSlots = fillEmptyMarketSlots(game)
+  const refreshedSlots = refreshMainMarket(game)
   player.passed = true
   const claimedPriority = claimPriority(game, players, player)
   player.scouts += 1
   game.scouts += 1
   game.log.push(
-    filledSlots > 0
+    refreshedSlots > 0
       ? claimedPriority
-        ? `${player.name} (${player.strategy}) scouts, fills ${filledSlots} empty slots, and takes Priority.`
-        : `${player.name} (${player.strategy}) scouts and fills ${filledSlots} empty slots.`
+        ? `${player.name} (${player.strategy}) scouts, refreshes ${refreshedSlots} shop slots, and takes Priority.`
+        : `${player.name} (${player.strategy}) scouts and refreshes ${refreshedSlots} shop slots.`
       : claimedPriority
-        ? `${player.name} (${player.strategy}) scouts, finds no empty slots, and takes Priority.`
-        : `${player.name} (${player.strategy}) scouts and finds no empty slots.`,
+        ? `${player.name} (${player.strategy}) scouts, finds no new shop cards, and takes Priority.`
+        : `${player.name} (${player.strategy}) scouts and finds no new shop cards.`,
   )
 }
 
@@ -439,7 +446,6 @@ function scorePlayers(players: Player[]) {
 function startNextRound(game: Game, players: Player[]) {
   game.round += 1
   game.event = game.round === 1 ? undefined : events.get(game.events.shift()!)
-  fillEmptyMarketSlots(game, phaseSupplyRefill(game.round))
   players.forEach((player) => {
     player.passed = false
     resetBudget(game, player)

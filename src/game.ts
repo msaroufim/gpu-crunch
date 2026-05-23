@@ -54,9 +54,10 @@ export type EventCard = {
 
 export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
 export const TRACKS: Track[] = ['capacity', 'policy', 'grid', 'moat']
-export const MARKET_SIZE = 12
 export const STARTER_MARKET_SIZE = 4
-export const SCOUT_REFILL_SIZE = MARKET_SIZE - STARTER_MARKET_SIZE
+export const MAIN_MARKET_SIZE = 8
+export const MARKET_SIZE = STARTER_MARKET_SIZE + MAIN_MARKET_SIZE
+export const SCOUT_REFILL_SIZE = MAIN_MARKET_SIZE
 export const GAME_PHASES = 12
 
 export const resourceLabels: Record<Resource, string> = {
@@ -259,14 +260,6 @@ export const OPENING_MAIN_CARD_IDS = [
   'customs-waiver',
   'university-lab-grant',
 ]
-
-export const phaseSupplyRefill = (phase: number) => {
-  if (phase <= 1) return 0
-  if (phase <= 3) return 1
-  if (phase <= 6) return 2
-  if (phase <= 9) return 4
-  return 6
-}
 
 export const EVENTS: EventCard[] = [
   { id: 'china-sales-window', name: 'H20 Suitcase Diplomat', headline: 'A very normal pallet of China-compliant accelerators gets diplomatic immunity.', rule: 'Money costs -2. Compute costs +1.', costMod: { money: -2, compute: 1 } },

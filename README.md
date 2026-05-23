@@ -23,7 +23,7 @@ Players compete to build the strongest AI infrastructure tableau from a shared m
 
 - 52-card deck
 - 5-card common market
-- Event deck of market shocks
+- Event deck of brief market shocks
 - Four resources: Money, Influence, Compute, Energy
 - Printed VP on cards
 
@@ -37,6 +37,8 @@ At the start of each phase:
 - Reset each player's temporary budget.
 - Budget equals base resources plus income icons from built cards, modified by the event.
 - Unspent resources from prior phases are gone.
+
+Events are separate from the 52-card deck. They are short global shocks like `Tariff Whiplash`, `ASML Credential Leak`, `Engineer Poaching War`, and `Power Price Spike`.
 
 On your turn, choose one:
 

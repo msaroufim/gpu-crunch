@@ -305,7 +305,7 @@ function startGame(room: Room) {
     deck: weightedDeck(),
     market: [],
     discard: [],
-    eventDeck: shuffle(EVENTS.map((event) => event.id)).slice(0, 5),
+    eventDeck: shuffle(EVENTS.map((event) => event.id)).slice(0, 8),
     event: null,
     log: [],
   }

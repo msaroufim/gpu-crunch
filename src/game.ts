@@ -72,7 +72,7 @@ export const trackLabels: Record<Track, string> = {
 
 export const effectRules: Record<EffectId, { name: string; text: string; broken?: boolean }> = {
   priority: { name: 'Priority', text: 'Local buff: take initiative next phase if unclaimed.', broken: true },
-  shock: { name: 'Shock', text: "Global debuff: replace the current event with this card's forced event.", broken: true },
+  shock: { name: 'Shock', text: "Global debuff: replace the next event with this card's forced event.", broken: true },
 }
 
 export const cardRole = (card: Card): CardRole => {

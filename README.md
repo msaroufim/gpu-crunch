@@ -93,7 +93,7 @@ Printed resource bonuses on cards below 3 VP count as income icons. They refresh
 Every card belongs to one of a few clear effect families:
 
 - Priority: local buff that gives you the Priority Card if it is unclaimed. Its owner acts first next phase.
-- Shock: global debuff manipulation that replaces the current event with that card's forced event.
+- Shock: global debuff manipulation that replaces the next event with that card's forced event.
 
 There is no stealing or deleting built cards. Interaction comes from racing the public market, taking Priority, and forcing event windows.
 Mid and late Priority cards pay extra cost in the resources already printed on the card because acting first can create back-to-back tempo.
@@ -110,7 +110,7 @@ Cards show a lightweight role tag to make the deck easier to scan:
 
 - Scout -> Priority: be the first player to skip a weak market so you can act first when the next phase opens.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
-- Shock -> Bad Window: build first, then replace the current event with a card-specific crisis for everyone still waiting.
+- Shock -> Bad Window: replace the next visible crisis with a card-specific crisis so everyone can see the bad window coming.
 - Income -> Finisher: build reusable income early so expensive VP cards become reachable later.
 
 ## Current Card Themes

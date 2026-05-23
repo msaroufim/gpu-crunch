@@ -147,6 +147,12 @@ function canPay(player: Player, card: Card, event?: EventCard) {
   return RESOURCES.every((resource) => player.budget[resource] >= cardCost[resource])
 }
 
+function replaceNextEvent(game: Game, forcedEventId: string) {
+  if (game.events.length === 0) return false
+  game.events[0] = forcedEventId
+  return true
+}
+
 function resetBudget(game: Game, player: Player) {
   player.budget = baseBudget()
   for (const cardId of player.tableau) addBudget(player.budget, productiveIncome(cards.get(cardId)!))
@@ -301,7 +307,7 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
       claimPriority(game, players, player)
       break
     case 'shock': {
-      game.event = events.get(shockEventForCard(card))
+      replaceNextEvent(game, shockEventForCard(card))
       break
     }
   }

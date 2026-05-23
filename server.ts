@@ -181,6 +181,12 @@ function cardCost(room: Room, card: Card): ResourceMap {
   return effectiveCost(card, currentEvent(room))
 }
 
+function replaceNextEvent(room: Room, forcedEventId: string) {
+  if (room.game.eventDeck.length === 0) return false
+  room.game.eventDeck[0] = forcedEventId
+  return true
+}
+
 function canPay(player: Player, cost: ResourceMap) {
   return RESOURCES.every((resource) => player.resources[resource] >= cost[resource])
 }
@@ -345,9 +351,12 @@ function applyEffect(room: Room, player: Player, card: Card) {
       break
     case 'shock': {
       const forcedEventId = shockEventForCard(card)
-      room.game.event = forcedEventId
       const event = eventsById.get(forcedEventId)
-      log(room, `${player.name} replaced the event with ${event?.name ?? 'a forced event'}.`)
+      if (replaceNextEvent(room, forcedEventId)) {
+        log(room, `${player.name} queued ${event?.name ?? 'a forced event'} as the next crisis.`)
+      } else {
+        log(room, `${player.name} built ${card.name}, but there is no future crisis to replace.`)
+      }
       break
     }
   }

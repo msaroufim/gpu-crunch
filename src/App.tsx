@@ -251,7 +251,7 @@ function CardView({
   const forcedEvent = card.effect === 'shock'
     ? EVENTS.find((candidate) => candidate.id === shockEventForCard(card))
     : undefined
-  const effectText = forcedEvent ? `${effect?.text} Forces: ${forcedEvent.name}.` : effect?.text
+  const effectText = forcedEvent ? `${effect?.text} Next: ${forcedEvent.name}.` : effect?.text
   const displayCost = effectiveCost(card, event)
   const blockedByEvent = RESOURCES.some((resource) => displayCost[resource] >= 50)
 
@@ -541,7 +541,7 @@ function ComboGuide() {
   const combos = [
     ['Scout -> Priority', 'Skip a weak market so you can act first when the next phase opens.'],
     ['Priority -> Market Snipe', 'Take initiative before a visible late card or key resource card gets contested.'],
-    ['Shock -> Bad Window', 'Build first, then replace the current event with a worse window for everyone still waiting.'],
+    ['Shock -> Bad Window', 'Replace the next visible crisis so everyone can see the bad window coming.'],
     ['Income -> Finisher', 'Build reusable income early so expensive VP cards become reachable later.'],
   ]
 

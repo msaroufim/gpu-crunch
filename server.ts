@@ -1,0 +1,544 @@
+import express from 'express'
+import { createServer } from 'node:http'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { Server } from 'socket.io'
+import {
+  CARDS,
+  EVENTS,
+  RESOURCES,
+  type Card,
+  type EventCard,
+  type Resource,
+  type ResourceMap,
+  type TrackMap,
+  addMaps,
+  emptyTracks,
+  effectiveCost,
+  productiveIncome,
+} from './src/game.js'
+
+type Player = {
+  id: string
+  name: string
+  isBot?: boolean
+  focus?: Resource[]
+  resources: ResourceMap
+  tracks: TrackMap
+  tableau: string[]
+  passed: boolean
+  initiative: boolean
+  score: number
+}
+
+type Game = {
+  status: 'lobby' | 'playing' | 'finished'
+  round: number
+  maxRounds: number
+  activePlayer: number
+  deck: string[]
+  market: string[]
+  discard: string[]
+  eventDeck: string[]
+  event: string | null
+  log: string[]
+}
+
+type Room = {
+  id: string
+  hostId: string
+  players: Player[]
+  game: Game
+}
+
+const app = express()
+const httpServer = createServer(app)
+const io = new Server(httpServer, {
+  cors: { origin: '*' },
+})
+
+const rooms = new Map<string, Room>()
+const cardsById = new Map(CARDS.map((card) => [card.id, card]))
+const eventsById = new Map(EVENTS.map((event) => [event.id, event]))
+const DEFAULT_ROOM_ID = 'POC'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const distPath = path.join(__dirname, 'dist')
+app.use(express.static(distPath))
+app.get('/healthz', (_req, res) => res.json({ ok: true }))
+app.get(/.*/, (_req, res) => res.sendFile(path.join(distPath, 'index.html')))
+
+function roomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < 5; i += 1) code += chars[Math.floor(Math.random() * chars.length)]
+  return rooms.has(code) ? roomCode() : code
+}
+
+function shuffle<T>(items: T[]) {
+  const next = [...items]
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[next[i], next[j]] = [next[j], next[i]]
+  }
+  return next
+}
+
+function weightedDeck() {
+  const early = shuffle(CARDS.filter((card) => card.era === 'early').map((card) => card.id))
+  const mid = shuffle(CARDS.filter((card) => card.era === 'mid').map((card) => card.id))
+  const late = shuffle(CARDS.filter((card) => card.era === 'late').map((card) => card.id))
+  const deck: string[] = []
+
+  while (early.length || mid.length || late.length) {
+    deck.push(...early.splice(0, 4))
+    deck.push(...mid.splice(0, 2))
+    deck.push(...late.splice(0, 1))
+  }
+
+  return deck
+}
+
+function startingResources(): ResourceMap {
+  return { money: 4, influence: 2, compute: 1, energy: 1 }
+}
+
+function freshPlayer(id: string, name: string, isBot = false, focus?: Resource[]): Player {
+  return {
+    id,
+    name: name.trim().slice(0, 18) || (isBot ? 'Bot' : 'Player'),
+    isBot,
+    focus,
+    resources: startingResources(),
+    tracks: emptyTracks(),
+    tableau: [],
+    passed: false,
+    initiative: false,
+    score: 0,
+  }
+}
+
+function newGame(): Game {
+  return {
+    status: 'lobby',
+    round: 0,
+    maxRounds: 8,
+    activePlayer: 0,
+    deck: [],
+    market: [],
+    discard: [],
+    eventDeck: [],
+    event: null,
+    log: ['Room created. Add players, then start the first supply phase.'],
+  }
+}
+
+function view(room: Room) {
+  return {
+    ...room,
+    cards: CARDS,
+    events: EVENTS,
+  }
+}
+
+function broadcast(room: Room) {
+  io.to(room.id).emit('room', view(room))
+}
+
+function log(room: Room, line: string) {
+  room.game.log = [line, ...room.game.log].slice(0, 18)
+}
+
+function currentEvent(room: Room): EventCard | undefined {
+  return room.game.event ? eventsById.get(room.game.event) : undefined
+}
+
+function cardCost(room: Room, card: Card): ResourceMap {
+  return effectiveCost(card, currentEvent(room))
+}
+
+function canPay(player: Player, cost: ResourceMap) {
+  return RESOURCES.every((resource) => player.resources[resource] >= cost[resource])
+}
+
+function sumMap(values?: Partial<ResourceMap>) {
+  return Object.values(values ?? {}).reduce((sum, value) => sum + value, 0)
+}
+
+function botFocusValue(player: Player, card: Card) {
+  if (!player.focus?.length) return 0
+
+  const focus = new Set(player.focus)
+  const income = productiveIncome(card)
+  let value = 0
+  for (const resource of RESOURCES) {
+    const focused = focus.has(resource)
+    const cardIncome = income?.[resource] ?? 0
+    const cardGain = card.gain?.[resource] ?? 0
+    const cardCost = card.cost[resource] ?? 0
+
+    if (focused) {
+      value += cardIncome * 9
+      value += cardGain * 4
+      value += cardCost * 0.7
+    } else {
+      value -= cardCost * 2
+      value -= cardIncome
+    }
+  }
+
+  return value
+}
+
+function botCardValue(room: Room, player: Player, card: Card) {
+  const incomeValue = sumMap(productiveIncome(card))
+  const gainValue = sumMap(card.gain)
+  const effectValue = card.effect
+    ? ({ chain: 11, disrupt: 8, hack: 9, raid: 8, scout: 6, surge: 9 } as Record<string, number>)[card.effect]
+    : 0
+  const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
+
+  return lateVpValue + incomeValue * 4 + gainValue * 2 + effectValue + botFocusValue(player, card)
+}
+
+function fillMarket(room: Room) {
+  while (room.game.market.length < 5) {
+    const cardId = room.game.deck.shift()
+    if (!cardId) break
+    room.game.market.push(cardId)
+  }
+}
+
+function canAffordBase(card: Card) {
+  const budget = startingResources()
+  return RESOURCES.every((resource) => budget[resource] >= (card.cost[resource] ?? 0))
+}
+
+function seedOpeningMarket(room: Room) {
+  const opening: string[] = []
+  for (let index = 0; index < room.game.deck.length && opening.length < 5; ) {
+    const cardId = room.game.deck[index]
+    const card = cardsById.get(cardId)
+    if (card?.era === 'early' && canAffordBase(card)) {
+      opening.push(cardId)
+      room.game.deck.splice(index, 1)
+    } else {
+      index += 1
+    }
+  }
+  room.game.market.push(...opening)
+  fillMarket(room)
+}
+
+function cycleMarketCards(room: Room, cardIds: string[]) {
+  const removed: string[] = []
+  for (const cardId of cardIds) {
+    const index = room.game.market.indexOf(cardId)
+    if (index < 0) continue
+    const [removedId] = room.game.market.splice(index, 1)
+    removed.push(removedId)
+  }
+  room.game.discard.push(...removed)
+  fillMarket(room)
+  return removed
+}
+
+function lowestVpMarketCards(room: Room, count: number) {
+  return [...room.game.market]
+    .sort((a, b) => {
+      const vpDiff = (cardsById.get(a)?.vp ?? 0) - (cardsById.get(b)?.vp ?? 0)
+      return vpDiff || room.game.market.indexOf(a) - room.game.market.indexOf(b)
+    })
+    .slice(0, count)
+}
+
+function highestVpMarketCard(room: Room) {
+  return [...room.game.market].sort((a, b) => (cardsById.get(b)?.vp ?? 0) - (cardsById.get(a)?.vp ?? 0))[0]
+}
+
+function phaseBudget(player: Player, event?: EventCard): ResourceMap {
+  const budget = startingResources()
+  for (const cardId of player.tableau) {
+    const card = cardsById.get(cardId)
+    if (!card) continue
+    const income = productiveIncome(card)
+    if (!income) continue
+    for (const resource of RESOURCES) budget[resource] += income[resource] ?? 0
+  }
+  if (event?.incomeMod) {
+    for (const resource of RESOURCES) budget[resource] = Math.max(0, budget[resource] + (event.incomeMod[resource] ?? 0))
+  }
+  return budget
+}
+
+function startRound(room: Room) {
+  const game = room.game
+  game.round += 1
+  game.event = game.eventDeck.shift() ?? shuffle(EVENTS.map((event) => event.id))[0]
+  const event = currentEvent(room)
+  room.players.forEach((player) => {
+    player.passed = false
+    player.resources = phaseBudget(player, event)
+  })
+  const initiativeIndex = room.players.findIndex((player) => player.initiative)
+  game.activePlayer = initiativeIndex >= 0 ? initiativeIndex : (game.round - 1) % room.players.length
+  room.players.forEach((player) => {
+    player.initiative = false
+  })
+  log(room, `Phase ${game.round}: ${event?.name ?? 'Open Market'} is active.`)
+}
+
+function startGame(room: Room) {
+  room.players.forEach((player) => {
+    player.resources = startingResources()
+    player.tracks = emptyTracks()
+    player.tableau = []
+    player.passed = false
+    player.initiative = false
+    player.score = 0
+  })
+  room.game = {
+    status: 'playing',
+    round: 0,
+    maxRounds: 8,
+    activePlayer: 0,
+    deck: weightedDeck(),
+    market: [],
+    discard: [],
+    eventDeck: shuffle(EVENTS.map((event) => event.id)).slice(0, 5),
+    event: null,
+    log: [],
+  }
+  seedOpeningMarket(room)
+  startRound(room)
+}
+
+function nextActive(room: Room) {
+  const game = room.game
+  if (room.players.every((player) => player.passed)) {
+    finishRound(room)
+    return
+  }
+
+  for (let step = 1; step <= room.players.length; step += 1) {
+    const index = (game.activePlayer + step) % room.players.length
+    if (!room.players[index].passed) {
+      game.activePlayer = index
+      return
+    }
+  }
+}
+
+function applyEffect(room: Room, player: Player, card: Card) {
+  switch (card.effect) {
+    case 'scout':
+      cycleMarketCards(room, lowestVpMarketCards(room, 2))
+      player.resources.influence += 1
+      log(room, `${player.name} cycled the weak end of the market.`)
+      break
+    case 'surge':
+      player.resources.money += 3
+      player.resources.compute += 2
+      player.resources.energy += 2
+      log(room, `${player.name} triggered a budget surge.`)
+      break
+    case 'raid': {
+      const taken = { money: 0, compute: 0 }
+      room.players.forEach((opponent) => {
+        if (opponent.id === player.id) return
+        if (opponent.resources.money > 0) {
+          opponent.resources.money -= 1
+          taken.money += 1
+        }
+        if (opponent.resources.compute > 0) {
+          opponent.resources.compute -= 1
+          taken.compute += 1
+        }
+      })
+      player.resources.money += taken.money
+      player.resources.compute += taken.compute
+      log(room, `${player.name} raided rivals for ${taken.money} Money and ${taken.compute} Compute.`)
+      break
+    }
+    case 'disrupt': {
+      const target = highestVpMarketCard(room)
+      const removed = target ? cycleMarketCards(room, [target]) : []
+      log(room, removed.length ? `${player.name} trashed ${cardsById.get(removed[0])?.name} from the market.` : `${player.name} found no market card to disrupt.`)
+      break
+    }
+    case 'chain':
+      log(room, `${player.name} opened a chain window.`)
+      break
+    case 'hack':
+      log(room, `${player.name} slipped through the event penalties.`)
+      break
+  }
+}
+
+function buildCard(room: Room, player: Player, cardId: string) {
+  const card = cardsById.get(cardId)
+  if (!card) return 'Unknown card.'
+  if (room.game.market.includes(cardId) === false) return 'That card is not in the market.'
+
+  const cost = cardCost(room, card)
+  if (!canPay(player, cost)) return 'Not enough resources.'
+
+  for (const resource of RESOURCES) player.resources[resource] -= cost[resource]
+  player.resources = addMaps(player.resources, card.gain)
+
+  player.tableau.push(cardId)
+  room.game.market = room.game.market.filter((id) => id !== cardId)
+  fillMarket(room)
+  applyEffect(room, player, card)
+  player.passed = card.effect !== 'chain'
+  log(room, `${player.name} built ${card.name}.`)
+  if (card.effect === 'chain') return
+  nextActive(room)
+}
+
+function startScout(room: Room, player: Player) {
+  const removed = cycleMarketCards(room, room.game.market.slice(0, 2))
+  player.initiative = true
+  player.passed = true
+  log(room, `${player.name} scouted the market, cycled ${removed.length} cards, and took next-phase initiative.`)
+  nextActive(room)
+}
+
+function finishRound(room: Room) {
+  if (room.game.round >= room.game.maxRounds) {
+    finishGame(room)
+  } else {
+    startRound(room)
+  }
+}
+
+function finishGame(room: Room) {
+  room.game.status = 'finished'
+  room.players.forEach((player) => {
+    const cardVp = player.tableau.reduce((sum, cardId) => sum + (cardsById.get(cardId)?.vp ?? 0), 0)
+    player.score = cardVp
+  })
+  log(room, 'Game finished. Printed VP on built cards has been scored.')
+}
+
+function botAct(room: Room) {
+  const player = room.players[room.game.activePlayer]
+  if (!player?.isBot || room.game.status !== 'playing') return
+
+  const affordable = room.game.market
+    .map((id) => cardsById.get(id)!)
+    .filter((card) => canPay(player, cardCost(room, card)))
+    .sort((a, b) => botCardValue(room, player, b) - botCardValue(room, player, a))
+
+  if (affordable[0] && (room.game.round > 3 || affordable.length > 2 || botFocusValue(player, affordable[0]) >= 2)) {
+    buildCard(room, player, affordable[0].id)
+  } else {
+    startScout(room, player)
+  }
+
+  setTimeout(() => {
+    if (room.game.status === 'playing' && room.players[room.game.activePlayer]?.isBot) botAct(room)
+    broadcast(room)
+  }, 450)
+}
+
+io.on('connection', (socket) => {
+  socket.on('joinDefault', ({ name }: { name: string }, ack) => {
+    const room: Room = {
+      id: DEFAULT_ROOM_ID,
+      hostId: socket.id,
+      players: [
+        freshPlayer(socket.id, name),
+        freshPlayer('bot-supply-desk', 'Supply Desk', true, ['money', 'compute']),
+        freshPlayer('bot-policy-shop', 'Policy Shop', true, ['influence', 'energy']),
+      ],
+      game: newGame(),
+    }
+    rooms.set(DEFAULT_ROOM_ID, room)
+    socket.join(DEFAULT_ROOM_ID)
+    startGame(room)
+    ack?.(view(room))
+    broadcast(room)
+    if (room.players[room.game.activePlayer]?.isBot) botAct(room)
+  })
+
+  socket.on('createRoom', ({ name }: { name: string }, ack) => {
+    const id = roomCode()
+    const room: Room = {
+      id,
+      hostId: socket.id,
+      players: [freshPlayer(socket.id, name)],
+      game: newGame(),
+    }
+    rooms.set(id, room)
+    socket.join(id)
+    ack?.(view(room))
+    broadcast(room)
+  })
+
+  socket.on('joinRoom', ({ roomId, name }: { roomId: string; name: string }, ack) => {
+    const room = rooms.get(roomId.toUpperCase())
+    if (!room) return ack?.({ error: 'Room not found.' })
+    if (room.game.status !== 'lobby') return ack?.({ error: 'That game has already started.' })
+    if (room.players.length >= 4) return ack?.({ error: 'Room is full.' })
+    room.players.push(freshPlayer(socket.id, name))
+    socket.join(room.id)
+    ack?.(view(room))
+    broadcast(room)
+  })
+
+  socket.on('addBot', ({ roomId }: { roomId: string }) => {
+    const room = rooms.get(roomId)
+    if (!room || room.hostId !== socket.id || room.game.status !== 'lobby' || room.players.length >= 4) return
+    room.players.push(freshPlayer(`bot-${Date.now()}`, `Bot ${room.players.length}`, true))
+    broadcast(room)
+  })
+
+  socket.on('startGame', ({ roomId }: { roomId: string }) => {
+    const room = rooms.get(roomId)
+    if (!room || room.hostId !== socket.id || room.players.length < 2) return
+    startGame(room)
+    broadcast(room)
+    if (room.players[room.game.activePlayer]?.isBot) botAct(room)
+  })
+
+  socket.on('build', ({ roomId, cardId }: { roomId: string; cardId: string }) => {
+    const room = rooms.get(roomId)
+    if (!room || room.game.status !== 'playing') return
+    const player = room.players[room.game.activePlayer]
+    if (!player || player.id !== socket.id) return
+    const error = buildCard(room, player, cardId)
+    if (error) socket.emit('notice', error)
+    broadcast(room)
+    if (room.players[room.game.activePlayer]?.isBot) botAct(room)
+  })
+
+  socket.on('pass', ({ roomId }: { roomId: string }) => {
+    const room = rooms.get(roomId)
+    if (!room || room.game.status !== 'playing') return
+    const player = room.players[room.game.activePlayer]
+    if (!player || player.id !== socket.id) return
+    const error = startScout(room, player)
+    if (error) socket.emit('notice', error)
+    broadcast(room)
+    if (room.players[room.game.activePlayer]?.isBot) botAct(room)
+  })
+
+  socket.on('disconnect', () => {
+    for (const room of rooms.values()) {
+      const player = room.players.find((p) => p.id === socket.id)
+      if (!player || room.game.status !== 'lobby') continue
+      room.players = room.players.filter((p) => p.id !== socket.id)
+      if (room.players.length === 0) rooms.delete(room.id)
+      else {
+        room.hostId = room.players[0].id
+        broadcast(room)
+      }
+    }
+  })
+})
+
+const port = Number(process.env.PORT ?? 3001)
+httpServer.listen(port, () => {
+  console.log(`GPU supply chain game server listening on ${port}`)
+})

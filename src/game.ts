@@ -244,13 +244,13 @@ export const OPENING_MARKET_CARD_IDS = [
 ]
 
 export const EVENTS: EventCard[] = [
-  { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -2. Influence costs +1.', costMod: { money: -2, influence: 1 } },
-  { id: 'tariff-whiplash', name: 'Tariff Whiplash', headline: 'The same shipment has three different prices.', rule: 'Money costs +1. Influence costs -2.', costMod: { money: 1, influence: -2 } },
-  { id: 'asml-credential-leak', name: 'ASML Credential Leak', headline: 'A toolchain login becomes a board-level incident.', rule: 'Compute costs -2. Influence costs +1.', costMod: { influence: 1, compute: -2 } },
-  { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Compute costs +1. Money costs -1. Fabrication cards cannot be built.', costMod: { compute: 1, money: -1 }, blockedSuits: ['Fabrication'] },
-  { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Compute costs +1. Energy costs -2.', costMod: { compute: 1, energy: -2 } },
-  { id: 'hbm-sold-out', name: 'HBM Sold Out', headline: 'Memory vendors stop answering calls.', rule: 'Compute costs +1. Money costs -2.', costMod: { compute: 1, money: -2 } },
-  { id: 'power-price-spike', name: 'Power Price Spike', headline: 'The marginal megawatt gets ugly.', rule: 'Energy costs +1. Compute costs -2.', costMod: { energy: 1, compute: -2 } },
+  { id: 'china-sales-window', name: 'China Sales Window', headline: 'Sell before the rule changes.', rule: 'Money costs -2. Compute costs +1.', costMod: { money: -2, compute: 1 } },
+  { id: 'tariff-whiplash', name: 'Tariff Whiplash', headline: 'The same shipment has three different prices.', rule: 'Influence costs -2. Energy costs -1. Money costs +1.', costMod: { money: 1, influence: -2, energy: -1 } },
+  { id: 'asml-credential-leak', name: 'ASML Credential Leak', headline: 'A toolchain login becomes a board-level incident.', rule: 'Compute costs -2. Money costs -1. Influence costs +1.', costMod: { money: -1, influence: 1, compute: -2 } },
+  { id: 'foundry-lockdown', name: 'Foundry Lockdown', headline: 'A single fab incident freezes the whole calendar.', rule: 'Money costs -2. Energy costs -1. Compute costs +1.', costMod: { money: -2, compute: 1, energy: -1 } },
+  { id: 'compiler-zero-day', name: 'Compiler Zero-Day', headline: 'Nobody trusts the toolchain until the patch lands.', rule: 'Energy costs -2. Influence costs -1. Compute costs +1.', costMod: { influence: -1, compute: 1, energy: -2 } },
+  { id: 'hbm-sold-out', name: 'HBM Sold Out', headline: 'Memory vendors stop answering calls.', rule: 'Money costs -2. Influence costs -1. Compute costs +1.', costMod: { money: -2, influence: -1, compute: 1 } },
+  { id: 'power-price-spike', name: 'Power Price Spike', headline: 'The marginal megawatt gets ugly.', rule: 'Compute costs -2. Money costs -1. Energy costs +1.', costMod: { money: -1, compute: -2, energy: 1 } },
   { id: 'panic-order', name: 'Panic Order', headline: 'A model demo turns into a purchase order.', rule: 'Money costs -2. Compute costs -2. Influence costs +1.', costMod: { money: -2, compute: -2, influence: 1 } },
 ]
 

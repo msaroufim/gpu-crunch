@@ -44,7 +44,7 @@ type Game = {
   maxRounds: number
   activePlayer: number
   deck: string[]
-  market: string[]
+  market: (string | null)[]
   discard: string[]
   eventDeck: string[]
   event: string | null
@@ -228,34 +228,24 @@ function botCardValue(room: Room, player: Player, card: Card) {
   return lateVpValue + incomeValue * 4 + effectValue + botFocusValue(player, card)
 }
 
-function fillMarket(room: Room) {
-  while (room.game.market.length < MARKET_SIZE) {
-    const cardId = room.game.deck.shift()
-    if (!cardId) break
-    room.game.market.push(cardId)
-  }
-}
-
 function seedOpeningMarket(room: Room) {
   for (const cardId of OPENING_MARKET_CARD_IDS) {
     const index = room.game.deck.indexOf(cardId)
     if (index >= 0) room.game.deck.splice(index, 1)
   }
-  room.game.market.push(...OPENING_MARKET_CARD_IDS)
-  fillMarket(room)
+  room.game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
+    const openingCard = OPENING_MARKET_CARD_IDS[index]
+    if (openingCard) return openingCard
+    return room.game.deck.shift() ?? null
+  })
 }
 
-function cycleMarketCards(room: Room, cardIds: string[]) {
-  const removed: string[] = []
-  for (const cardId of cardIds) {
-    const index = room.game.market.indexOf(cardId)
-    if (index < 0) continue
-    const [removedId] = room.game.market.splice(index, 1)
-    removed.push(removedId)
-  }
-  room.game.discard.push(...removed)
-  fillMarket(room)
-  return removed
+function fillOneMarketSlot(room: Room) {
+  const emptyIndex = room.game.market.findIndex((cardId) => cardId === null)
+  const nextCard = room.game.deck.shift()
+  if (emptyIndex < 0 || !nextCard) return null
+  room.game.market[emptyIndex] = nextCard
+  return nextCard
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -376,8 +366,8 @@ function buildCard(room: Room, player: Player, cardId: string) {
   player.actionsTaken += 1
   player.cardsBuilt += 1
   player.tableau.push(cardId)
-  room.game.market = room.game.market.filter((id) => id !== cardId)
-  fillMarket(room)
+  const marketIndex = room.game.market.indexOf(cardId)
+  if (marketIndex >= 0) room.game.market[marketIndex] = null
   applyEffect(room, player, card)
   player.passed = !continuesAfterBuild(card)
   log(room, `${player.name} built ${card.name}.`)
@@ -386,16 +376,21 @@ function buildCard(room: Room, player: Player, cardId: string) {
 }
 
 function startScout(room: Room, player: Player) {
-  const removed = cycleMarketCards(room, room.game.market.slice(0, 2))
+  const addedCardId = fillOneMarketSlot(room)
+  const addedCard = addedCardId ? cardsById.get(addedCardId) : undefined
   const claimedPriority = claimPriority(room, player)
   player.actionsThisPhase += 1
   player.actionsTaken += 1
   player.passed = true
   log(
     room,
-    claimedPriority
-      ? `${player.name} scouted the market, cycled ${removed.length} cards, and took next-phase initiative.`
-      : `${player.name} scouted the market and cycled ${removed.length} cards. Priority Card was already claimed.`,
+    addedCard
+      ? claimedPriority
+        ? `${player.name} scouted, filled an empty slot with ${addedCard.name}, and took next-phase initiative.`
+        : `${player.name} scouted and filled an empty slot with ${addedCard.name}. Priority Card was already claimed.`
+      : claimedPriority
+        ? `${player.name} scouted, found no empty market slot to fill, and took next-phase initiative.`
+        : `${player.name} scouted but found no empty market slot to fill. Priority Card was already claimed.`,
   )
   nextActive(room)
 }
@@ -422,7 +417,8 @@ function botAct(room: Room) {
   if (!player?.isBot || room.game.status !== 'playing') return
 
   const affordable = room.game.market
-    .map((id) => cardsById.get(id)!)
+    .map((id) => id ? cardsById.get(id) : undefined)
+    .filter((card): card is Card => Boolean(card))
     .filter((card) => canPay(player, cardCost(room, card)))
     .sort((a, b) => botCardValue(room, player, b) - botCardValue(room, player, a))
 

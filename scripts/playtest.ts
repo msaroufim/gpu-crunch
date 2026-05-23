@@ -50,7 +50,7 @@ type PlayableSample = {
 
 type Game = {
   deck: string[]
-  market: string[]
+  market: (string | null)[]
   discard: string[]
   events: string[]
   event?: EventCard
@@ -159,34 +159,24 @@ function resetBudget(game: Game, player: Player) {
   addBudget(player.budget, game.event?.incomeMod)
 }
 
-function fillMarket(game: Game) {
-  while (game.market.length < MARKET_SIZE) {
-    const card = game.deck.shift()
-    if (!card) break
-    game.market.push(card)
-  }
-}
-
 function seedOpeningMarket(game: Game) {
   for (const cardId of OPENING_MARKET_CARD_IDS) {
     const index = game.deck.indexOf(cardId)
     if (index >= 0) game.deck.splice(index, 1)
   }
-  game.market.push(...OPENING_MARKET_CARD_IDS)
-  fillMarket(game)
+  game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
+    const openingCard = OPENING_MARKET_CARD_IDS[index]
+    if (openingCard) return openingCard
+    return game.deck.shift() ?? null
+  })
 }
 
-function cycleMarketCards(game: Game, cardIds: string[]) {
-  const removed: string[] = []
-  for (const cardId of cardIds) {
-    const index = game.market.indexOf(cardId)
-    if (index < 0) continue
-    const [removedId] = game.market.splice(index, 1)
-    removed.push(removedId)
-  }
-  game.discard.push(...removed)
-  fillMarket(game)
-  return removed
+function fillOneMarketSlot(game: Game) {
+  const emptyIndex = game.market.findIndex((cardId) => cardId === null)
+  const nextCard = game.deck.shift()
+  if (emptyIndex < 0 || !nextCard) return null
+  game.market[emptyIndex] = nextCard
+  return nextCard
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -318,8 +308,8 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
   const cardCost = cost(card, game.event)
   for (const resource of RESOURCES) player.budget[resource] -= cardCost[resource]
   addBudget(player.incomeBuilt, productiveIncome(card))
-  game.market = game.market.filter((id) => id !== cardId)
-  fillMarket(game)
+  const marketIndex = game.market.indexOf(cardId)
+  if (marketIndex >= 0) game.market[marketIndex] = null
   player.tableau.push(cardId)
   player.buildsByEra[card.era] += 1
   player.passed = !continuesAfterBuild(card)
@@ -333,15 +323,19 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
 }
 
 function scout(game: Game, players: Player[], player: Player) {
-  cycleMarketCards(game, game.market.slice(0, 2))
+  const addedCardId = fillOneMarketSlot(game)
   player.passed = true
   const claimedPriority = claimPriority(game, players, player)
   player.scouts += 1
   game.scouts += 1
   game.log.push(
-    claimedPriority
-      ? `${player.name} (${player.strategy}) scouts, cycles the market, and takes Priority.`
-      : `${player.name} (${player.strategy}) scouts and cycles the market.`,
+    addedCardId
+      ? claimedPriority
+        ? `${player.name} (${player.strategy}) scouts, fills ${cards.get(addedCardId)?.name}, and takes Priority.`
+        : `${player.name} (${player.strategy}) scouts and fills ${cards.get(addedCardId)?.name}.`
+      : claimedPriority
+        ? `${player.name} (${player.strategy}) scouts, finds no empty slot, and takes Priority.`
+        : `${player.name} (${player.strategy}) scouts and finds no empty slot.`,
   )
 }
 
@@ -422,7 +416,10 @@ function simulateToEnd(game: Game, players: Player[]) {
       continue
     }
     const player = players[game.active]
-    const playable = game.market.map((id) => cards.get(id)!).filter((card) => canPay(player, card, game.event))
+    const playable = game.market
+      .map((id) => id ? cards.get(id) : undefined)
+      .filter((card): card is Card => Boolean(card))
+      .filter((card) => canPay(player, card, game.event))
     if (playable.length === 0) {
       scout(game, players, player)
       nextActive(game, players)
@@ -500,7 +497,10 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
     while (!players.every((player) => player.passed) && guard < 20) {
       guard += 1
       const player = players[game.active]
-      const playable = game.market.map((id) => cards.get(id)!).filter((card) => canPay(player, card, game.event))
+      const playable = game.market
+        .map((id) => id ? cards.get(id) : undefined)
+        .filter((card): card is Card => Boolean(card))
+        .filter((card) => canPay(player, card, game.event))
       game.playableCounts.push(playable.length)
       game.playableSamples.push({ round: game.round, strategy: player.strategy, count: playable.length })
       if (shouldScout(player, playable, game.round)) {

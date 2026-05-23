@@ -1002,13 +1002,47 @@ button:disabled {
   width: 100%;
 }
 
-.market-cards .game-card {
+.market-cards .game-card,
+.market-empty-slot {
   min-width: 0;
   min-height: 248px;
+}
+
+.market-cards .game-card {
   grid-template-rows: auto 48px auto auto minmax(32px, auto) auto auto;
   gap: 5px;
   padding: 6px;
   box-shadow: 0 8px 18px rgba(18, 34, 51, 0.07);
+}
+
+.market-empty-slot {
+  display: grid;
+  place-content: center;
+  gap: 6px;
+  border: 1px dashed #b9c5cf;
+  border-radius: 8px;
+  padding: 10px;
+  color: #657482;
+  background:
+    linear-gradient(90deg, rgba(31, 76, 113, 0.06) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(31, 76, 113, 0.06) 1px, transparent 1px),
+    rgba(255, 255, 255, 0.46);
+  background-size: 14px 14px;
+  text-align: center;
+}
+
+.market-empty-slot span {
+  color: #405060;
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.market-empty-slot p {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .market-cards .card-topline {

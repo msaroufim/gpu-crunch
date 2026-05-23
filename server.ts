@@ -208,7 +208,7 @@ function botFocusValue(player: Player, card: Card) {
 function botCardValue(room: Room, player: Player, card: Card) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ shield: 8, priority: 7, shock: 9 } as Record<string, number>)[card.effect]
+    ? ({ priority: 7, shock: 9 } as Record<string, number>)[card.effect]
     : 0
   const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
 
@@ -340,9 +340,6 @@ function nextActive(room: Room) {
 
 function applyEffect(room: Room, player: Player, card: Card) {
   switch (card.effect) {
-    case 'shield':
-      log(room, `${player.name} protected ${card.name} from suit-lock events.`)
-      break
     case 'priority':
       claimPriority(room, player)
       log(room, `${player.name} took next-phase initiative with ${card.name}.`)

@@ -79,7 +79,6 @@ Printed resource bonuses on cards below 3 VP count as income icons. They refresh
 
 Every card belongs to one of a few clear effect families:
 
-- Shield: local buff that lets that card be built through suit-lock events.
 - Priority: local buff that gives you the Priority Card. Its owner acts first next phase.
 - Shock: global debuff manipulation that replaces the current event with that card's forced event.
 
@@ -90,13 +89,12 @@ There is no stealing or deleting built cards. Interaction comes from racing the 
 Cards show a lightweight role tag to make the deck easier to scan:
 
 - Setup: build income for later turns.
-- Protect: keep your real payoff alive.
 - Timing: win the market or event window.
 - Finisher: expensive points that close the game.
 
 ## Common Combos
 
-- Shield -> Blocked Suit: use Shield cards when an event would normally lock that card suit.
+- Scout -> Priority: skip a weak market so you can act first when the next phase opens.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
 - Shock -> Bad Window: build first, then replace the current event with a card-specific crisis for everyone still waiting.
 - Income -> Finisher: build reusable income early so expensive VP cards become reachable later.

@@ -230,7 +230,7 @@ function focusValue(card: Card, strategy: Strategy, round: number) {
 function cardValue(card: Card, strategy: Strategy, round: number) {
   const incomeValue = sumMap(productiveIncome(card))
   const effectValue = card.effect
-    ? ({ shield: 8, priority: 7, shock: 9 } as Record<string, number>)[card.effect]
+    ? ({ priority: 7, shock: 9 } as Record<string, number>)[card.effect]
     : 0
   const earlyIncome = round <= 4 ? incomeValue * 5 : incomeValue * 2
   const lateVp = round >= 7 ? card.vp * 7 : card.vp * 4
@@ -276,7 +276,6 @@ function sharkCardValue(game: Game, players: Player[], player: Player, card: Car
   const denial = nextOpponent && canPay(nextOpponent, card, game.event) ? card.vp * 6 + sumMap(productiveIncome(card)) * Math.min(remaining, 3) : 0
   const forcedEvent = card.effect === 'shock' ? events.get(shockEventForCard(card)) : undefined
   const effectValue =
-    card.effect === 'shield' ? 6 + card.vp * 2 :
     card.effect === 'priority' ? 6 + (game.round <= 5 ? 3 : 0) :
     card.effect === 'shock' ? 8 + sumMap(forcedEvent?.costMod) + sumMap(forcedEvent?.incomeMod) :
     0
@@ -299,8 +298,6 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
   game.effectBuilds += 1
   player.effectBuilds += 1
   switch (card.effect) {
-    case 'shield':
-      break
     case 'priority':
       claimPriority(game, players, player)
       break
@@ -711,7 +708,8 @@ function summarizeCardStats(games: number) {
     const costText = RESOURCES.filter((resource) => baseCost[resource] > 0)
       .map((resource) => `${resource}:${baseCost[resource]}`)
       .join('/')
-    return `${card.name} (${card.vp} VP, ${effectRules[card.effect!].name}, ${costText || 'free'}): winner builds ${bucket.winnerBuilds}, total builds ${bucket.totalBuilds}, win when built ${winRate.toFixed(1)}%`
+    const effectName = card.effect ? effectRules[card.effect].name : 'No effect'
+    return `${card.name} (${card.vp} VP, ${effectName}, ${costText || 'free'}): winner builds ${bucket.winnerBuilds}, total builds ${bucket.totalBuilds}, win when built ${winRate.toFixed(1)}%`
   }
 
   console.log(`Simulated ${games} games for card stats.`)
@@ -780,7 +778,8 @@ function summarizeApexMirror(games: number) {
     const costText = RESOURCES.filter((resource) => baseCost[resource] > 0)
       .map((resource) => `${resource}:${baseCost[resource]}`)
       .join('/')
-    return `${card.name} (${card.vp} VP, ${effectRules[card.effect!].name}, ${costText || 'free'}): picked ${(pickRate).toFixed(1)}%, winner builds ${bucket.winnerBuilds}, total builds ${bucket.totalBuilds}, win when built ${winRate.toFixed(1)}%`
+    const effectName = card.effect ? effectRules[card.effect].name : 'No effect'
+    return `${card.name} (${card.vp} VP, ${effectName}, ${costText || 'free'}): picked ${(pickRate).toFixed(1)}%, winner builds ${bucket.winnerBuilds}, total builds ${bucket.totalBuilds}, win when built ${winRate.toFixed(1)}%`
   }
 
   console.log(`Simulated ${games} Apex mirror games.`)

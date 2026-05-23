@@ -414,7 +414,7 @@ function BrokenMechanics() {
 
 function ComboGuide() {
   const combos = [
-    ['Shield -> Blocked Suit', 'Use Shield cards when an event would normally lock that card suit.'],
+    ['Scout -> Priority', 'Skip a weak market so you can act first when the next phase opens.'],
     ['Priority -> Market Snipe', 'Take initiative before a visible late card or key resource card gets contested.'],
     ['Shock -> Bad Window', 'Build first, then replace the current event with a worse window for everyone still waiting.'],
     ['Income -> Finisher', 'Build reusable income early so expensive VP cards become reachable later.'],

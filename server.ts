@@ -11,9 +11,9 @@ import {
   RESOURCES,
   SCOUT_REFILL_SIZE,
   STARTER_MARKET_SIZE,
+  STARTER_SUPPLY_COUNT,
   OPENING_MARKET_CARD_IDS,
   OPENING_MAIN_CARD_IDS,
-  isStarterCardId,
   type Card,
   type EventCard,
   type Resource,
@@ -80,6 +80,8 @@ const DEFAULT_SEATS = [
   { name: 'Red GPU Co.', botName: 'Red Accelerators', focus: ['money', 'compute'] as Resource[] },
   { name: 'Blue GPU Co.', botName: 'Blue Silicon', focus: ['influence', 'energy'] as Resource[] },
 ]
+const starterCardIds = new Set(OPENING_MARKET_CARD_IDS)
+const PHASE_MAIN_REFILL_SIZE = 1
 let gameSequence = 0
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -153,6 +155,12 @@ function displayName(name: string | undefined, fallback: string) {
   return trimmed && trimmed !== DEFAULT_HUMAN_NAME ? trimmed : fallback
 }
 
+function canStartGame(room: Room, socketId: string) {
+  if (room.hostId === socketId) return true
+  if (room.id !== DEFAULT_ROOM_ID) return false
+  return room.players.some((player) => player.id === socketId && !player.isBot)
+}
+
 function newGame(): Game {
   return {
     id: `lobby-${Date.now()}-${gameSequence}`,
@@ -170,7 +178,20 @@ function newGame(): Game {
   }
 }
 
+function enforceStarterMarket(room: Room) {
+  if (room.game.market.length === 0) return
+
+  room.game.market = Array.from({ length: MARKET_SIZE }, (_, index) => {
+    if (isProtectedStarterSlot(room, index)) return OPENING_MARKET_CARD_IDS[index] ?? null
+    if (index < STARTER_MARKET_SIZE && starterCardIds.has(room.game.market[index] ?? '')) return null
+    return room.game.market[index] ?? null
+  })
+  room.game.deck = room.game.deck.filter((cardId) => !starterCardIds.has(cardId))
+  room.game.discard = room.game.discard.filter((cardId) => !starterCardIds.has(cardId))
+}
+
 function view(room: Room) {
+  enforceStarterMarket(room)
   return {
     ...room,
     cards: CARDS,
@@ -214,6 +235,23 @@ function canPay(player: Player, cost: ResourceMap) {
   return RESOURCES.every((resource) => player.resources[resource] >= cost[resource])
 }
 
+function starterBuildCount(room: Room, cardId: string) {
+  return room.players.filter((player) => player.tableau.includes(cardId)).length
+}
+
+function starterSupplyLimit(room: Room) {
+  return Math.min(STARTER_SUPPLY_COUNT, room.players.length)
+}
+
+function isStarterPileAvailable(room: Room, cardId: string) {
+  return starterCardIds.has(cardId) && starterBuildCount(room, cardId) < starterSupplyLimit(room)
+}
+
+function isProtectedStarterSlot(room: Room, index: number) {
+  const cardId = OPENING_MARKET_CARD_IDS[index]
+  return index < STARTER_MARKET_SIZE && Boolean(cardId && isStarterPileAvailable(room, cardId))
+}
+
 function sumMap(values?: Partial<ResourceMap>) {
   return Object.values(values ?? {}).reduce((sum, value) => sum + value, 0)
 }
@@ -246,9 +284,10 @@ function botCardValue(room: Room, player: Player, card: Card) {
   const effectValue = card.effect
     ? ({ priority: 7, shock: 9 } as Record<string, number>)[card.effect]
     : 0
-  const lateVpValue = room.game.round >= 7 ? card.vp * 8 : card.vp * 4
+  const vpValue = room.game.round >= 8 ? card.vp * 8 : room.game.round >= 5 ? card.vp * 4 : card.vp * 1.5
+  const incomeMultiplier = room.game.round <= 5 ? 7 : 4
 
-  return lateVpValue + incomeValue * 4 + effectValue + botFocusValue(player, card)
+  return vpValue + incomeValue * incomeMultiplier + effectValue + botFocusValue(player, card)
 }
 
 function seedOpeningMarket(room: Room) {
@@ -278,7 +317,8 @@ function drawMarketCard(room: Room) {
 
 function refreshMainMarket(room: Room) {
   let refreshed = 0
-  for (let index = STARTER_MARKET_SIZE; index < room.game.market.length && refreshed < SCOUT_REFILL_SIZE; index += 1) {
+  for (let index = 0; index < room.game.market.length && refreshed < SCOUT_REFILL_SIZE; index += 1) {
+    if (isProtectedStarterSlot(room, index)) continue
     const existing = room.game.market[index]
     if (existing) room.game.discard.push(existing)
     const nextCard = drawMarketCard(room)
@@ -286,6 +326,18 @@ function refreshMainMarket(room: Room) {
     if (nextCard) refreshed += 1
   }
   return refreshed
+}
+
+function fillEmptyMainMarket(room: Room) {
+  let filled = 0
+  for (let index = 0; index < room.game.market.length && filled < PHASE_MAIN_REFILL_SIZE; index += 1) {
+    if (isProtectedStarterSlot(room, index)) continue
+    if (room.game.market[index]) continue
+    const nextCard = drawMarketCard(room)
+    room.game.market[index] = nextCard
+    if (nextCard) filled += 1
+  }
+  return filled
 }
 
 function phaseBudget(player: Player, event?: EventCard): ResourceMap {
@@ -315,6 +367,7 @@ function startRound(room: Room) {
     player.actionsThisPhase = 0
     player.resources = phaseBudget(player, event)
   })
+  fillEmptyMainMarket(room)
   const initiativeIndex = room.game.priorityPlayerId
     ? room.players.findIndex((player) => player.id === room.game.priorityPlayerId)
     : -1
@@ -399,10 +452,13 @@ function buildCard(room: Room, player: Player, cardId: string) {
   if (!card) return 'Unknown card.'
   if (room.game.market.includes(cardId) === false) return 'That card is not in the market.'
   if (player.tableau.includes(cardId)) return 'You already built that card.'
-  if (card.starter && player.tableau.some(isStarterCardId)) return 'You already chose a START lane.'
+  if (card.starter && !isStarterPileAvailable(room, cardId)) return 'That START pile is empty.'
 
   const cost = cardCost(room, card)
   if (!canPay(player, cost)) return 'Not enough resources.'
+
+  const marketIndex = room.game.market.indexOf(cardId)
+  const wasProtectedStarterSlot = marketIndex >= 0 && isProtectedStarterSlot(room, marketIndex)
 
   for (const resource of RESOURCES) player.resources[resource] -= cost[resource]
 
@@ -410,8 +466,13 @@ function buildCard(room: Room, player: Player, cardId: string) {
   player.actionsTaken += 1
   player.cardsBuilt += 1
   player.tableau.push(cardId)
-  const marketIndex = room.game.market.indexOf(cardId)
-  if (marketIndex >= STARTER_MARKET_SIZE) room.game.market[marketIndex] = null
+  if (marketIndex >= 0) {
+    if (wasProtectedStarterSlot) {
+      if (!isProtectedStarterSlot(room, marketIndex)) room.game.market[marketIndex] = drawMarketCard(room)
+    } else {
+      room.game.market[marketIndex] = null
+    }
+  }
   applyEffect(room, player, card)
   player.passed = !continuesAfterBuild(card)
   log(room, `${player.name} built ${card.name}.`)
@@ -429,11 +490,11 @@ function startScout(room: Room, player: Player) {
     room,
     refreshedSlots > 0
       ? claimedPriority
-        ? `${player.name} scouted, refreshed ${refreshedSlots} shop slots, and took next-phase initiative.`
-        : `${player.name} scouted and refreshed ${refreshedSlots} shop slots. Priority Card was already claimed.`
+        ? `${player.name} used their action to scout, refreshed ${refreshedSlots} shop slots, and took next-phase initiative.`
+        : `${player.name} used their action to scout and refreshed ${refreshedSlots} shop slots. Priority Card was already claimed.`
       : claimedPriority
-        ? `${player.name} scouted, found no new shop cards, and took next-phase initiative.`
-        : `${player.name} scouted but found no new shop cards. Priority Card was already claimed.`,
+        ? `${player.name} used their action to scout, found no new shop cards, and took next-phase initiative.`
+        : `${player.name} used their action to scout but found no new shop cards. Priority Card was already claimed.`,
   )
   nextActive(room)
 }
@@ -463,7 +524,6 @@ function botAct(room: Room) {
     .map((id) => id ? cardsById.get(id) : undefined)
     .filter((card): card is Card => Boolean(card))
     .filter((card) => !player.tableau.includes(card.id))
-    .filter((card) => !card.starter || !player.tableau.some(isStarterCardId))
     .filter((card) => canPay(player, cardCost(room, card)))
     .sort((a, b) => botCardValue(room, player, b) - botCardValue(room, player, a))
 
@@ -554,7 +614,15 @@ io.on('connection', (socket) => {
 
   socket.on('startGame', ({ roomId }: { roomId: string }) => {
     const room = rooms.get(roomId)
-    if (!room || room.hostId !== socket.id || room.players.length < 2) return
+    if (!room) return
+    if (!canStartGame(room, socket.id)) {
+      socket.emit('notice', 'Only a player in this room can restart the game.')
+      return
+    }
+    if (room.players.length < 2) {
+      socket.emit('notice', 'Add at least two players before starting.')
+      return
+    }
     startGame(room)
     broadcast(room)
     if (room.players[room.game.activePlayer]?.isBot) botAct(room)

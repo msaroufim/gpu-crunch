@@ -130,6 +130,12 @@ button.secondary {
   background: #ffffff;
 }
 
+button.danger {
+  color: #7c241e;
+  border-color: #d7aaa6;
+  background: #fff6f5;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -211,6 +217,101 @@ button:disabled {
 
 .game-header p {
   color: #5f6d79;
+}
+
+.turn-banner {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  display: grid;
+  grid-template-columns: minmax(190px, 0.38fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+  border: 1px solid #aebdca;
+  border-left: 5px solid #174c7d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #102033;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 28px rgba(20, 37, 55, 0.08);
+}
+
+.turn-banner.your-turn {
+  border-left-color: #2ca84f;
+  background: #f7fcf6;
+}
+
+.turn-banner span,
+.section-note {
+  color: #637282;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.turn-banner > div > span {
+  text-transform: uppercase;
+}
+
+.turn-banner h2 {
+  margin: 2px 0 0;
+  color: #102033;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.turn-order-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.turn-order-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  border: 1px solid color-mix(in srgb, var(--seat-color, #687685) 46%, #ccd6df);
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #102033;
+  background: color-mix(in srgb, var(--seat-color, #687685) 10%, #ffffff);
+}
+
+.turn-order-pill.current {
+  color: #ffffff;
+  border-color: var(--seat-color, #174c7d);
+  background: var(--seat-color, #174c7d);
+}
+
+.turn-order-pill.passed {
+  opacity: 0.55;
+}
+
+.turn-order-pill em {
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: var(--seat-color, #687685);
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.turn-order-pill.current em {
+  color: #102033;
+}
+
+.turn-order-pill strong {
+  color: inherit;
+  font-size: 12px;
+}
+
+.turn-order-pill b {
+  color: inherit;
+  font-size: 11px;
 }
 
 .event-band {
@@ -522,6 +623,11 @@ button:disabled {
 .section-heading {
   margin-bottom: 8px;
   color: #102033;
+}
+
+.section-note {
+  margin: 3px 0 0;
+  line-height: 1.25;
 }
 
 .card-grid {
@@ -1291,6 +1397,7 @@ button:disabled {
 @media (max-width: 820px) {
   .lobby-shell,
   .board-layout,
+  .turn-banner,
   .event-band,
   .right-rail {
     grid-template-columns: 1fr;
@@ -1323,6 +1430,10 @@ button:disabled {
   .section-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .turn-order-pills {
+    justify-content: flex-start;
   }
 
   .shock-queue {

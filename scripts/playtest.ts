@@ -6,12 +6,12 @@ import {
   RESOURCES,
   SCOUT_REFILL_SIZE,
   STARTER_MARKET_SIZE,
+  STARTER_SUPPLY_COUNT,
   OPENING_MARKET_CARD_IDS,
   OPENING_MAIN_CARD_IDS,
   continuesAfterBuild,
   effectRules,
   effectiveCost,
-  isStarterCardId,
   productiveIncome,
   shockEventForCard,
   type Card,
@@ -76,6 +76,8 @@ type Game = {
 
 const cards = new Map(CARDS.map((card) => [card.id, card]))
 const events = new Map(EVENTS.map((event) => [event.id, event]))
+const PHASE_MAIN_REFILL_SIZE = 1
+const starterCardIds = new Set(OPENING_MARKET_CARD_IDS)
 
 function claimPriority(game: Game, players: Player[], player: Player) {
   if (game.priorityPlayer) return false
@@ -160,7 +162,6 @@ function cost(card: Card, event?: EventCard): ResourceMap {
 
 function canPay(player: Player, card: Card, event?: EventCard) {
   if (player.tableau.includes(card.id)) return false
-  if (card.starter && player.tableau.some(isStarterCardId)) return false
   const cardCost = cost(card, event)
   return RESOURCES.every((resource) => player.budget[resource] >= cardCost[resource])
 }
@@ -168,6 +169,25 @@ function canPay(player: Player, card: Card, event?: EventCard) {
 function canPayWithBudget(budget: ResourceMap, card: Card, event?: EventCard) {
   const cardCost = cost(card, event)
   return RESOURCES.every((resource) => budget[resource] >= cardCost[resource])
+}
+
+function starterBuildCount(players: Player[], cardId: string) {
+  return players.filter((player) => player.tableau.includes(cardId)).length
+}
+
+function starterSupplyLimit(players: Player[]) {
+  return Math.min(STARTER_SUPPLY_COUNT, players.length)
+}
+
+function isStarterPileAvailable(players: Player[], cardId: string) {
+  return starterCardIds.has(cardId) && starterBuildCount(players, cardId) < starterSupplyLimit(players)
+}
+
+function isProtectedStarterSlot(game: Game, players: Player[], index: number) {
+  const cardId = OPENING_MARKET_CARD_IDS[index]
+  if (index >= STARTER_MARKET_SIZE || !cardId || !isStarterPileAvailable(players, cardId)) return false
+  game.market[index] = cardId
+  return true
 }
 
 function replaceNextEvent(game: Game, forcedEventId: string) {
@@ -213,9 +233,10 @@ function drawMarketCard(game: Game) {
   return game.deck.shift() ?? null
 }
 
-function refreshMainMarket(game: Game) {
+function refreshMainMarket(game: Game, players: Player[]) {
   let refreshed = 0
-  for (let index = STARTER_MARKET_SIZE; index < game.market.length && refreshed < SCOUT_REFILL_SIZE; index += 1) {
+  for (let index = 0; index < game.market.length && refreshed < SCOUT_REFILL_SIZE; index += 1) {
+    if (isProtectedStarterSlot(game, players, index)) continue
     const existing = game.market[index]
     if (existing) game.discard.push(existing)
     const nextCard = drawMarketCard(game)
@@ -223,6 +244,18 @@ function refreshMainMarket(game: Game) {
     if (nextCard) refreshed += 1
   }
   return refreshed
+}
+
+function fillEmptyMainMarket(game: Game, players: Player[]) {
+  let filled = 0
+  for (let index = 0; index < game.market.length && filled < PHASE_MAIN_REFILL_SIZE; index += 1) {
+    if (isProtectedStarterSlot(game, players, index)) continue
+    if (game.market[index]) continue
+    const nextCard = drawMarketCard(game)
+    game.market[index] = nextCard
+    if (nextCard) filled += 1
+  }
+  return filled
 }
 
 function sumMap(values?: Partial<ResourceMap>) {
@@ -364,13 +397,20 @@ function applyEffect(game: Game, players: Player[], player: Player, card: Card) 
 function build(game: Game, players: Player[], player: Player, cardId: string, writeLog = true) {
   const card = cards.get(cardId)!
   if (player.tableau.includes(cardId)) return
-  if (card.starter && player.tableau.some(isStarterCardId)) return
+  if (card.starter && !isStarterPileAvailable(players, cardId)) return
   const cardCost = cost(card, game.event)
+  const marketIndex = game.market.indexOf(cardId)
+  const wasProtectedStarterSlot = marketIndex >= 0 && isProtectedStarterSlot(game, players, marketIndex)
   for (const resource of RESOURCES) player.budget[resource] -= cardCost[resource]
   addBudget(player.incomeBuilt, productiveIncome(card))
-  const marketIndex = game.market.indexOf(cardId)
-  if (marketIndex >= STARTER_MARKET_SIZE) game.market[marketIndex] = null
   player.tableau.push(cardId)
+  if (marketIndex >= 0) {
+    if (wasProtectedStarterSlot) {
+      if (!isProtectedStarterSlot(game, players, marketIndex)) game.market[marketIndex] = drawMarketCard(game)
+    } else {
+      game.market[marketIndex] = null
+    }
+  }
   player.buildsByEra[card.era] += 1
   player.passed = !continuesAfterBuild(card)
   applyEffect(game, players, player, card)
@@ -383,7 +423,7 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
 }
 
 function scout(game: Game, players: Player[], player: Player) {
-  const refreshedSlots = refreshMainMarket(game)
+  const refreshedSlots = refreshMainMarket(game, players)
   player.passed = true
   const claimedPriority = claimPriority(game, players, player)
   player.scouts += 1
@@ -450,6 +490,7 @@ function startNextRound(game: Game, players: Player[]) {
     player.passed = false
     resetBudget(game, player)
   })
+  fillEmptyMainMarket(game, players)
   const initiative = game.priorityPlayer
     ? players.findIndex((player) => player.name === game.priorityPlayer)
     : -1

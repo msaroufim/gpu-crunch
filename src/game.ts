@@ -55,6 +55,7 @@ export type EventCard = {
 export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
 export const TRACKS: Track[] = ['capacity', 'policy', 'grid', 'moat']
 export const STARTER_MARKET_SIZE = 4
+export const STARTER_SUPPLY_COUNT = 4
 export const MAIN_MARKET_SIZE = 8
 export const MARKET_SIZE = STARTER_MARKET_SIZE + MAIN_MARKET_SIZE
 export const SCOUT_REFILL_SIZE = MAIN_MARKET_SIZE
@@ -125,10 +126,10 @@ export const continuesAfterBuild = () =>
 
 export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   const cost = emptyResources()
+  if (card.starter) return cost
   if (event?.blockedSuits?.includes(card.suit)) {
     return { money: 99, influence: 99, compute: 99, energy: 99 }
   }
-  if (card.starter) return cost
   const printedCostTotal = RESOURCES.reduce((sum, resource) => sum + (card.cost[resource] ?? 0), 0)
   const allocatedPremium = (premium: number): Partial<ResourceMap> => {
     if (premium <= 0) return {}
@@ -165,10 +166,17 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
       .sort((a, b) => b.printed - a.printed)
     const next: Partial<ResourceMap> = {}
     let remaining = discount
-    for (const item of printedResources) {
-      if (remaining <= 0) break
-      next[item.resource] = (next[item.resource] ?? 0) + 1
-      remaining -= 1
+    while (remaining > 0) {
+      let discounted = false
+      for (const item of printedResources) {
+        if (remaining <= 0) break
+        const alreadyDiscounted = next[item.resource] ?? 0
+        if (alreadyDiscounted >= item.printed) continue
+        next[item.resource] = alreadyDiscounted + 1
+        remaining -= 1
+        discounted = true
+      }
+      if (!discounted) break
     }
     return next
   }
@@ -176,7 +184,7 @@ export const effectiveCost = (card: Card, event?: EventCard): ResourceMap => {
   const priorityPremium = card.effect === 'priority'
     ? card.tier === 1 ? 0 : card.tier === 2 ? 1 : 2
     : 0
-  const curveDiscount = card.tier === 1 ? 0 : 1
+  const curveDiscount = card.tier
   const premiumByResource = addMaps(
     addMaps(emptyResources(), allocatedPremium(vpPremium)),
     allocatedPremium(priorityPremium),
@@ -312,6 +320,10 @@ export const EVENTS: EventCard[] = [
   { id: 'hbm-sold-out', name: 'HBM Vendor Left You On Read', headline: 'The memory wall becomes a literal wall with velvet rope and bottle service.', rule: 'Money costs -2. Influence costs -1. Compute costs +1.', costMod: { money: -2, influence: -1, compute: 1 } },
   { id: 'power-price-spike', name: 'Datacenter Asks For One More Gigawatt', headline: 'The utility replies with a laughing emoji and a 2031 interconnect date.', rule: 'Compute costs -2. Money costs -1. Energy costs +1.', costMod: { money: -1, compute: -2, energy: 1 } },
   { id: 'panic-order', name: 'SemiAnalysis Article Hits Slack', headline: 'Procurement forwards one chart and suddenly every CFO discovers capex courage.', rule: 'Money costs -2. Compute costs -2. Influence costs +1.', costMod: { money: -2, compute: -2, influence: 1 } },
+  { id: 'earnings-call-ai-count', name: 'Earnings Call Says AI 43 Times', headline: 'Investor relations adds one more slide and the market opens a portal to cheap cash.', rule: 'Money costs -2. Compute costs -1. Influence costs +1.', costMod: { money: -2, influence: 1, compute: -1 } },
+  { id: 'mayor-substation-tour', name: 'Mayor Cuts Ribbon On Extension Cord', headline: 'The photo op is legally a grid upgrade if nobody zooms in.', rule: 'Energy costs -2. Influence costs -1. Money costs +1.', costMod: { money: 1, influence: -1, energy: -2 } },
+  { id: 'customs-comma-crisis', name: 'Customs Holds Shipment Over Comma', headline: 'A manifest typo strands eight figures of hardware behind a PDF comment thread.', rule: 'Influence costs -2. Compute costs -1. Money costs +1.', costMod: { money: 1, influence: -2, compute: -1 } },
+  { id: 'benchmark-footnote', name: 'Benchmark Footnote Becomes Religion', headline: 'A tiny asterisk gets screenshotted into procurement law by lunch.', rule: 'Compute costs -2. Energy costs -1. Influence costs +1.', costMod: { influence: 1, compute: -2, energy: -1 } },
 ]
 
 const shockEventByCardId: Record<string, string> = {

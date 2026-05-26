@@ -7,6 +7,7 @@ import {
   Factory,
   Handshake,
   Hourglass,
+  RotateCcw,
   Search,
   SkipForward,
   Trophy,
@@ -17,10 +18,10 @@ import {
   CARDS,
   EVENTS,
   RESOURCES,
+  STARTER_SUPPLY_COUNT,
   cardRole,
   effectRules,
   effectiveCost,
-  isStarterCardId,
   productiveIncome,
   resourceLabels,
   roleHelp,
@@ -94,6 +95,7 @@ const resourceIcons: Record<Resource, typeof Banknote> = {
 
 const victoryRecordKey = 'gpu-crunch-victory-records'
 const recordedGamesKey = 'gpu-crunch-recorded-games'
+const cardCatalogById = new Map(CARDS.map((card) => [card.id, card]))
 
 function readJson<T>(key: string, fallback: T): T {
   try {
@@ -174,6 +176,16 @@ function actionStatus(player: Player, active?: boolean) {
   return player.actionsThisPhase > 0 ? 'Acted this phase' : 'Pending'
 }
 
+function playerVp(player: Player) {
+  return player.tableau.reduce((sum, cardId) => sum + (cardCatalogById.get(cardId)?.vp ?? 0), 0)
+}
+
+function starterSupplyRemaining(players: Player[], cardId: string) {
+  const supplyLimit = Math.min(STARTER_SUPPLY_COUNT, players.length)
+  const built = players.filter((player) => player.tableau.includes(cardId)).length
+  return Math.max(0, supplyLimit - built)
+}
+
 function adjustedCost(card: Card, event?: EventCard): ResourceMap {
   return effectiveCost(card, event)
 }
@@ -181,7 +193,6 @@ function adjustedCost(card: Card, event?: EventCard): ResourceMap {
 function canBuild(player: Player | undefined, card: Card, event?: EventCard) {
   if (!player) return false
   if (player.tableau.includes(card.id)) return false
-  if (card.starter && player.tableau.some(isStarterCardId)) return false
   const cost = adjustedCost(card, event)
   return RESOURCES.every((resource) => player.resources[resource] >= cost[resource])
 }
@@ -237,6 +248,7 @@ function CardView({
   highlighted = false,
   requiresAffordable = true,
   actionLabel = 'Build',
+  starterSupply,
   onBuild,
 }: {
   card: Card
@@ -247,6 +259,7 @@ function CardView({
   highlighted?: boolean
   requiresAffordable?: boolean
   actionLabel?: string
+  starterSupply?: number
   onBuild?: () => void
 }) {
   const affordable = owner ? canBuild(owner, card, event) : true
@@ -278,7 +291,7 @@ function CardView({
         <strong>{card.vp} VP</strong>
       </div>
       <div className="card-tags">
-        {card.starter && <div className="starter-chip" title="Free opening card">START</div>}
+        {card.starter && <div className="starter-chip" title="Free starter supply">{starterSupply === undefined ? 'START' : `START x${starterSupply}`}</div>}
         <div className="role-chip" title={roleHelp[cardRole(card)]}>{cardRole(card)}</div>
       </div>
       <h3>{card.name}</h3>
@@ -327,6 +340,7 @@ function PlayerPanel({
         {active && <Hourglass size={16} />}
       </div>
       <div className="turn-stats">
+        <span>{playerVp(player)} VP</span>
         <span>{actionStatus(player, active)}</span>
         <span>{player.actionsTaken} turns</span>
         <span>{record?.wins ?? 0} wins</span>
@@ -361,13 +375,70 @@ function PriorityCard({ owner }: { owner?: Player }) {
   )
 }
 
+function orderedPlayersForPhase(room: Room) {
+  if (room.game.status !== 'playing' || room.players.length === 0) return room.players
+
+  const ordered: Player[] = []
+  const activeIndex = Math.max(0, room.game.activePlayer)
+  for (let step = 0; step < room.players.length; step += 1) {
+    const player = room.players[(activeIndex + step) % room.players.length]
+    if (!player.passed) ordered.push(player)
+  }
+  for (const player of room.players) {
+    if (player.passed && !ordered.includes(player)) ordered.push(player)
+  }
+  return ordered
+}
+
+function TurnBanner({ room, socketId }: { room: Room; socketId?: string }) {
+  const activePlayer = room.players[room.game.activePlayer]
+  const isYourTurn = Boolean(activePlayer && activePlayer.id === socketId && room.game.status === 'playing')
+  const ordered = orderedPlayersForPhase(room)
+
+  return (
+    <section className={`turn-banner ${isYourTurn ? 'your-turn' : ''}`}>
+      <div>
+        <span>Current turn</span>
+        <h2>
+          {room.game.status === 'finished'
+            ? 'Game complete'
+            : isYourTurn
+              ? 'Your turn'
+              : `${activePlayer?.name ?? 'Player'} is up`}
+        </h2>
+      </div>
+      <div className="turn-order-pills" aria-label="Phase turn order">
+        {ordered.map((player, index) => {
+          const current = player.id === activePlayer?.id && room.game.status === 'playing'
+          const seat = seatTone(room.players.findIndex((candidate) => candidate.id === player.id))
+          const label = room.game.status === 'finished'
+            ? 'Final'
+            : current
+              ? 'Now'
+              : player.passed ? 'Acted' : `Next ${index}`
+          return (
+            <span
+              className={`turn-order-pill ${seat} ${current ? 'current' : ''} ${player.passed ? 'passed' : ''}`}
+              key={player.id}
+            >
+              <em>{label}</em>
+              <strong>{player.name}</strong>
+              <b>{playerVp(player)} VP</b>
+            </span>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 function ShockQueue({ current, upcoming }: { current?: EventCard; upcoming: EventCard[] }) {
   return (
     <section className="shock-queue">
       <div className="shock-card current">
         <span>Now</span>
         <strong>{current?.name ?? 'Opening Draft'}</strong>
-        <p>{current?.rule ?? 'No crisis this phase. Take one starter or Scout.'}</p>
+        <p>{current?.rule ?? 'No crisis this phase. Build a free START card or Scout to end your action.'}</p>
       </div>
       {upcoming.map((event, index) => (
         <div className="shock-card" key={`${event.id}-${index}`}>
@@ -465,7 +536,7 @@ function TableauZone({
           <h2>{player.name}</h2>
           {player.focus?.length ? <p className="focus-label">{focusText(player)}</p> : null}
           <p className="turn-line">
-            {player.actionsTaken} turns · {player.cardsBuilt} built
+            {playerVp(player)} VP · {player.actionsTaken} turns · {player.cardsBuilt} built
           </p>
         </div>
       </div>
@@ -485,6 +556,7 @@ function MarketRow({
   cards,
   event,
   owner,
+  players,
   disabled,
   onBuild,
 }: {
@@ -492,6 +564,7 @@ function MarketRow({
   cards: Map<string, Card>
   event?: EventCard
   owner?: Player
+  players: Player[]
   disabled: boolean
   onBuild: (cardId: string) => void
 }) {
@@ -501,6 +574,7 @@ function MarketRow({
         <div>
           <span>Common market</span>
           <h2>Available supply</h2>
+          <p className="section-note">START piles have limited copies. Exhausted START slots become normal shop slots.</p>
         </div>
       </div>
       <div className="market-cards">
@@ -510,7 +584,7 @@ function MarketRow({
             return (
               <div className={`market-empty-slot ${starterSlot ? 'starter-empty-slot' : ''}`} key={`empty-${index}`}>
                 <span>{starterSlot ? 'Starter empty' : 'Empty slot'}</span>
-            <p>{starterSlot ? 'Starter supply is gone.' : 'Scout refreshes this shop.'}</p>
+                <p>{starterSlot ? 'This START pile is exhausted.' : 'Scout refreshes this shop.'}</p>
               </div>
             )
           }
@@ -522,6 +596,7 @@ function MarketRow({
               event={event}
               owner={owner}
               disabled={disabled}
+              starterSupply={card.starter ? starterSupplyRemaining(players, card.id) : undefined}
               actionLabel="Build"
               onBuild={() => onBuild(cardId)}
             />
@@ -551,7 +626,7 @@ function BrokenMechanics() {
 
 function ComboGuide() {
   const combos = [
-    ['Scout -> Priority', 'Scout only when you hate every build or need Priority. It refills empty market slots and acts first next phase.'],
+    ['Scout -> Priority', 'Scout uses your action. It refreshes the main shop, can claim Priority, and you do not build afterward.'],
     ['Priority -> Market Snipe', 'Take initiative before a visible late card or key resource card gets contested.'],
     ['Shock -> Bad Window', 'Replace the next visible crisis so everyone can see the bad window coming.'],
     ['Income -> Finisher', 'Build reusable income early so expensive VP cards become reachable later.'],
@@ -622,9 +697,17 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
   const you = room.players.find((player) => player.id === socket?.id)
   const opponents = room.players.filter((player) => player.id !== socket?.id)
   const yourTurn = Boolean(you && activePlayer?.id === you.id && room.game.status === 'playing')
+  const canRestart = Boolean(you && (room.id === 'POC' || room.hostId === you.id))
+
+  const restartGame = () => {
+    if (!window.confirm('Restart this game from phase 1?')) return
+    socket?.emit('startGame', { roomId: room.id })
+  }
 
   return (
     <main className="game-shell">
+      <TurnBanner room={room} socketId={socket?.id} />
+
       <header className="game-header">
         <div>
           <h1>GPU Crunch</h1>
@@ -633,6 +716,12 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
           </p>
         </div>
         <div className="button-row">
+          {canRestart && (
+            <button type="button" className="secondary danger" onClick={restartGame}>
+              <RotateCcw size={16} />
+              Restart
+            </button>
+          )}
           <button type="button" className="secondary" onClick={() => setGlossaryOpen(true)}>
             <BookOpen size={16} />
             Glossary
@@ -679,6 +768,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             cards={cards}
             event={event}
             owner={you}
+            players={room.players}
             disabled={!yourTurn}
             onBuild={(cardId) => socket?.emit('build', { roomId: room.id, cardId })}
           />
@@ -719,7 +809,8 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <div className="section-heading">
               <div>
                 <span>Action</span>
-                <h2>{yourTurn ? 'Build from the market or scout it' : 'Waiting for your next action'}</h2>
+                <h2>{yourTurn ? 'Build one card, or Scout to end your turn' : 'Waiting for your next action'}</h2>
+                <p className="section-note">Scout is your whole action: refresh the main shop, maybe claim Priority, then wait.</p>
               </div>
               <button
                 type="button"
@@ -728,7 +819,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
                 onClick={() => socket?.emit('pass', { roomId: room.id })}
               >
                 <SkipForward size={16} />
-                Scout
+                Scout (end turn)
               </button>
             </div>
           </section>
@@ -738,12 +829,12 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
           <section className="rules-box">
             <h2>Scoring</h2>
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
-            <p>You start at 0 resources. The four START cards are always available and each gives one clear resource lane.</p>
-            <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 2 makes their printed cost harsher.</p>
+            <p>You start at 0 resources. Each START pile has up to 4 free copies, capped by current player count. Each player can build each one once.</p>
+            <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 3 makes their printed cost harsher.</p>
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>
-            <p>Scout only when you hate every build or need Priority. Most turns should build a card.</p>
-            <p>The shop is capped at 12 cards. Scout skips your build, refreshes the 8 main shop slots, and can claim Priority.</p>
+            <p>Scout spends your action. You cannot build a card after scouting that phase.</p>
+            <p>The shop is capped at 12 cards. Two empty main shop slots refill each phase. Scout skips your build, refreshes the 8 main shop slots, and can claim Priority.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>

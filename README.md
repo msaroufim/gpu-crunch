@@ -57,16 +57,16 @@ At the start of each phase:
 - Unspent resources from prior phases are gone.
 - The Priority Card owner acts first, then the card becomes unclaimed.
 
-Players start with no tableau and 0 resources. The first four market slots are permanent `START` supply piles, so the first turns are about choosing a simple resource lane before branching into the normal market:
+Players start with no tableau and 0 resources. The first four market slots begin as `START` supply piles, so the first turns are about choosing a simple resource lane before branching into the normal market:
 
 - `Broker Capacity`: Compute lane. Turns into cloud preorders, memory allocation, networking, and late Blackwell/cluster cards.
 - `Acquire Lease`: Energy lane. Turns into interconnects, zoning deals, cooling, and giant datacenter campuses.
 - `Stock Buyback`: Money lane. Turns into analyst hype, market pivots, panic buys, and IPO/war-chest plays.
 - `Lobby`: Influence lane. Turns into export licenses, tariff routing, sovereign AI deals, and government superclusters.
 
-The shop is capped at 12 cards: 4 permanent starter lanes plus 8 main shop cards. Scout refreshes the 8 main shop cards from the deck and can claim Priority.
+The shop is capped at 12 cards: 4 starter supply piles plus 8 main shop cards. Each START pile has up to 4 copies, capped by current player count. Once a pile is exhausted, that slot becomes a normal shop slot. At the start of each phase, up to two empty main shop slots refill from the deck. Scout refreshes all non-starter shop slots from the deck and can claim Priority.
 
-Events are separate from the 52-card deck. For now the prototype uses 8 short event cards and deals an 11-phase crisis queue after the opening draft by reshuffling that small event set as needed. Current examples include `China Sales Window`, `Tariff Whiplash`, `ASML Credential Leak`, `Foundry Lockdown`, and `Compiler Zero-Day`.
+Events are separate from the 52-card deck. For now the prototype uses 12 short event cards and deals an 11-phase crisis queue after the opening draft by reshuffling that small event set as needed. Current examples include `H20 Suitcase Diplomat`, `Tariff Armageddon Spreadsheet`, `ASML Password Is litho123`, `CoWoS Bouncer Checks The List`, and `Triton Intern Deletes Matmul`.
 
 Some dramatic events lock an entire card suit for one phase, such as `Foundry Lockdown` or `Compiler Zero-Day`.
 Events can change costs, block suits, or reduce budgets, but they do not create starting resources. Resource access comes from built cards.
@@ -74,9 +74,9 @@ Events can change costs, block suits, or reduce budgets, but they do not create 
 On your turn, choose one:
 
 - Build one card from the common market.
-- Scout: fill empty main market slots from the deck. If the Priority Card is unclaimed this phase, take it.
+- Scout: spend your action to refresh all main market slots from the deck. If the Priority Card is unclaimed this phase, take it.
 
-Scout only when you hate every build or need Priority. Most turns should build a card.
+Scout only when you hate every build or need Priority. You do not also build a card after scouting.
 
 Most builds end your turn for the phase.
 
@@ -88,6 +88,7 @@ When a card is built:
 - Add it to your tableau.
 - Resolve its immediate effect.
 - Leave that market slot empty.
+- At the start of the next phase, up to two empty main shop slots refill.
 
 After every player has acted, the next phase begins.
 
@@ -100,11 +101,11 @@ Resources do not score. Leftover resources are discarded every phase.
 Cards with 3+ VP are point cards:
 
 - They do not produce income.
-- Printed VP above 2 adds extra cost to the resources already shown in that card's cost.
+- Printed VP above 3 adds extra cost to the resources already shown in that card's cost.
 
 Printed resource bonuses on cards below 3 VP count as income icons. They refresh every phase and do not accumulate.
 
-`START` cards are free opening cards. Each player can build exactly one START card, and it still uses your single action for that phase.
+`START` cards are free supply piles with up to 4 copies each. Each player can build each START card once. When a pile is exhausted, that slot becomes a normal market slot.
 
 ## Broken Mechanics
 
@@ -126,7 +127,7 @@ Cards show a lightweight role tag to make the deck easier to scan:
 
 ## Common Combos
 
-- Scout -> Priority: be the first player to skip a weak market, refill empty slots, and act first when the next phase opens.
+- Scout -> Priority: be the first player to skip a weak market, refresh the main shop, and act first when the next phase opens.
 - Priority -> Market Snipe: take initiative before a visible late card or key resource card gets contested.
 - Shock -> Bad Window: replace the next visible crisis with a card-specific crisis so everyone can see the bad window coming.
 - Income -> Finisher: build reusable income early so expensive VP cards become reachable later.

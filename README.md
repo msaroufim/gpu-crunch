@@ -1,8 +1,26 @@
-# GPU Crunch
+# Data Center Crunch
 
-GPU Crunch is a browser prototype for a 52-card tableau game where rival GPU vendors race through the semiconductor supply chain, AI infrastructure buildouts, export controls, power constraints, talent raids, and market panic.
+Data Center Crunch is a browser prototype for a 52-card data center strategy tableau game where rival AI infrastructure operators race through GPU allocation, HBM supply, grid power, zoning fights, export controls, tariffs, and demand spikes.
 
 The long-term goal is a physical board game. This repo is a fast browser sandbox for testing the deck, pacing, and balance before printing anything.
+
+## Marketing Pitch
+
+Build the AI campus before the window closes.
+
+You are not just buying GPUs. You are assembling a public tableau of power deals, memory allocations, cloud preorders, policy favors, cooling retrofits, software moats, and market chaos. Every phase brings a one-turn shock, every card in the common market is visible, and every player can see the broken opportunity you are about to steal.
+
+The hook is an infrastructure gold rush with board-game timing: take Priority before a rival snipes the card you need, Scout to flush a stale market, or force the next crisis so your tariff play, HBM dinner, or Blackwell demand spike lands at exactly the wrong time for everyone else.
+
+Fun cards include:
+
+- `Soju Toast With Memory Vendors`: turn influence and a private dinner into another HBM allocation.
+- `Use Tariffs As A Moat`: route around the policy mess while rivals eat the delay.
+- `Blackwell Demand Moons`: convert late compute dominance into a 7 VP finisher.
+
+## Screenshot
+
+![Data Center Crunch game running](docs/game-running.png)
 
 ## Quick Start
 
@@ -33,7 +51,7 @@ Each PNG is `750x1050`, equivalent to a 2.5" x 3.5" card at 300 DPI.
 
 ## Core Idea
 
-Players compete to build the strongest AI infrastructure tableau from a shared market of cards. Every card is intentionally powerful, but the market is public, so the interaction comes from timing, denial, and choosing which broken opportunity to take before someone else does.
+Players compete to build the strongest AI data center tableau from a shared market of cards. Every card is intentionally powerful, but the market is public, so the interaction comes from timing, denial, and choosing which broken opportunity to take before someone else does.
 
 ## Components
 
@@ -41,7 +59,7 @@ Players compete to build the strongest AI infrastructure tableau from a shared m
 - 12-card common market
 - Event deck of brief market shocks
 - Four resources: Money, Influence, Compute, Energy
-- Vendor seats: green, red, and blue GPU vendors with different resource focuses
+- Operator seats: green, red, and blue AI infrastructure companies with different resource focuses
 - Printed VP on cards
 
 ## Turn Structure
@@ -136,6 +154,9 @@ Cards show a lightweight role tag to make the deck easier to scan:
 
 The deck includes cards like:
 
+- Soju Toast With Memory Vendors
+- Use Tariffs As A Moat
+- Blackwell Demand Moons
 - Acquire vLLM Team
 - Ship the Model
 - Vaguepost

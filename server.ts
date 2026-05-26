@@ -74,11 +74,12 @@ const rooms = new Map<string, Room>()
 const cardsById = new Map(CARDS.map((card) => [card.id, card]))
 const eventsById = new Map(EVENTS.map((event) => [event.id, event]))
 const DEFAULT_ROOM_ID = 'POC'
-const DEFAULT_HUMAN_NAME = 'Green GPU Co.'
+const DEFAULT_HUMAN_NAME = 'Green Data Center'
+const OLD_DEFAULT_HUMAN_NAME = 'Green GPU Co.'
 const DEFAULT_SEATS = [
-  { name: 'Green GPU Co.' },
-  { name: 'Red GPU Co.', botName: 'Red Accelerators', focus: ['money', 'compute'] as Resource[] },
-  { name: 'Blue GPU Co.', botName: 'Blue Silicon', focus: ['influence', 'energy'] as Resource[] },
+  { name: 'Green Data Center' },
+  { name: 'Red Campus AI', botName: 'Red Campus AI', focus: ['money', 'compute'] as Resource[] },
+  { name: 'Blue Grid Cloud', botName: 'Blue Grid Cloud', focus: ['influence', 'energy'] as Resource[] },
 ]
 const starterCardIds = new Set(OPENING_MARKET_CARD_IDS)
 let gameSequence = 0
@@ -151,7 +152,7 @@ function freshPlayer(id: string, name: string, isBot = false, focus?: Resource[]
 
 function displayName(name: string | undefined, fallback: string) {
   const trimmed = name?.trim().slice(0, 18)
-  return trimmed && trimmed !== DEFAULT_HUMAN_NAME ? trimmed : fallback
+  return trimmed && trimmed !== DEFAULT_HUMAN_NAME && trimmed !== OLD_DEFAULT_HUMAN_NAME ? trimmed : fallback
 }
 
 function canStartGame(room: Room, socketId: string) {
@@ -682,5 +683,5 @@ io.on('connection', (socket) => {
 
 const port = Number(process.env.PORT ?? 3001)
 httpServer.listen(port, () => {
-  console.log(`GPU supply chain game server listening on ${port}`)
+  console.log(`Data Center Crunch server listening on ${port}`)
 })

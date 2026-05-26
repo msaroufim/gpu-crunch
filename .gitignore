@@ -12,6 +12,7 @@ dist
 dist-ssr
 print-assets/
 *.png
+!docs/game-running.png
 *.local
 
 # Editor directories and files

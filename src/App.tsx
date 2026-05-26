@@ -86,6 +86,11 @@ const socketUrl =
   import.meta.env.VITE_SOCKET_URL ??
   (import.meta.env.DEV ? `${window.location.protocol}//${window.location.hostname}:3001` : window.location.origin)
 
+const GAME_TITLE = 'Data Center Crunch'
+const GAME_SUBTITLE = 'Data center strategy tableau'
+const DEFAULT_PLAYER_NAME = 'Green Data Center'
+const OLD_DEFAULT_PLAYER_NAME = 'Green GPU Co.'
+
 const resourceIcons: Record<Resource, typeof Banknote> = {
   money: Banknote,
   influence: Handshake,
@@ -710,9 +715,9 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
 
       <header className="game-header">
         <div>
-          <h1>GPU Crunch</h1>
+          <h1>{GAME_TITLE}</h1>
           <p>
-            Default POC game · Phase {room.game.round}/{room.game.maxRounds} · Deck {room.game.deck.length}
+            {GAME_SUBTITLE} · Phase {room.game.round}/{room.game.maxRounds} · Deck {room.game.deck.length}
           </p>
         </div>
         <div className="button-row">
@@ -831,7 +836,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>Income icons in a card's top-left are temporary budget each phase. Spend them or lose them.</p>
             <p>You start at 0 resources. Each START pile has up to 4 free copies, capped by current player count. Each player can build each one once.</p>
             <p>Cards with 3+ VP are point cards: they do not produce income, and printed VP above 3 makes their printed cost harsher.</p>
-            <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
+            <p>You are rival AI data center operators racing through GPUs, memory, grid power, zoning, tariffs, and demand shocks.</p>
             <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>
             <p>Scout spends your action. You cannot build a card after scouting that phase.</p>
             <p>The shop is capped at 16 cards. Up to one empty non-starter shop slot per player refills each phase. Scout skips your build, refreshes the non-starter shop slots, and can claim Priority.</p>
@@ -881,7 +886,8 @@ function App() {
     const join = () => {
       if (!socket.id || joinedSocketId.current === socket.id) return
       joinedSocketId.current = socket.id
-      const name = localStorage.getItem('gpu-game-name') ?? 'Green GPU Co.'
+      const storedName = localStorage.getItem('gpu-game-name')
+      const name = !storedName || storedName === OLD_DEFAULT_PLAYER_NAME ? DEFAULT_PLAYER_NAME : storedName
       socket.emit('joinDefault', { name }, (reply: Room | { error: string }) => {
         if ('error' in reply) {
           setNotice(reply.error)
@@ -909,8 +915,8 @@ function App() {
       ) : (
         <main className="loading-shell">
           <Cpu size={48} />
-          <h1>GPU Crunch</h1>
-          <p>Starting default POC game...</p>
+          <h1>{GAME_TITLE}</h1>
+          <p>Starting data center strategy tableau...</p>
         </main>
       )}
       {notice && <div className="toast">{notice}</div>}

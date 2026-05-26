@@ -81,7 +81,6 @@ const DEFAULT_SEATS = [
   { name: 'Blue GPU Co.', botName: 'Blue Silicon', focus: ['influence', 'energy'] as Resource[] },
 ]
 const starterCardIds = new Set(OPENING_MARKET_CARD_IDS)
-const PHASE_MAIN_REFILL_SIZE = 1
 let gameSequence = 0
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -330,7 +329,8 @@ function refreshMainMarket(room: Room) {
 
 function fillEmptyMainMarket(room: Room) {
   let filled = 0
-  for (let index = 0; index < room.game.market.length && filled < PHASE_MAIN_REFILL_SIZE; index += 1) {
+  const refillLimit = Math.max(1, room.players.length)
+  for (let index = 0; index < room.game.market.length && filled < refillLimit; index += 1) {
     if (isProtectedStarterSlot(room, index)) continue
     if (room.game.market[index]) continue
     const nextCard = drawMarketCard(room)

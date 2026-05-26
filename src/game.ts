@@ -56,7 +56,7 @@ export const RESOURCES: Resource[] = ['money', 'influence', 'compute', 'energy']
 export const TRACKS: Track[] = ['capacity', 'policy', 'grid', 'moat']
 export const STARTER_MARKET_SIZE = 4
 export const STARTER_SUPPLY_COUNT = 4
-export const MAIN_MARKET_SIZE = 8
+export const MAIN_MARKET_SIZE = 12
 export const MARKET_SIZE = STARTER_MARKET_SIZE + MAIN_MARKET_SIZE
 export const SCOUT_REFILL_SIZE = MAIN_MARKET_SIZE
 export const GAME_PHASES = 12
@@ -254,7 +254,7 @@ export const CARDS: Card[] = [
   c('nuclear-ppa', 'Gigawatt Datacenter Campus', 'Energy', 3, 'late', 'The lease option becomes a power-hungry city with its own substation drama.', { influence: 1, energy: 5 }, { energy: 3 }, { energy: 2 }, { grid: 5, policy: 1 }, 5, 'power', 'shock'),
   c('liquid-cooling-retrofit', 'Liquid Cooling Retrofit', 'Energy', 2, 'mid', 'Your racks stop thermal throttling and start flexing.', { compute: 2, energy: 1 }, { compute: 1, energy: 1 }, { compute: 1 }, { grid: 2, capacity: 1 }, 2, 'cooling', 'priority'),
   c('blackwell-ramp', 'Blackwell Ramp Goes Vertical', 'Silicon', 3, 'late', 'The flagship finally ships and the whole roadmap gets pulled forward.', { compute: 6 }, { compute: 4 }, { compute: 2 }, { capacity: 5, moat: 2 }, 7, 'fab', 'priority'),
-  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', {}, { compute: 2 }, { money: 1 }, { capacity: 1 }, 0, 'market', undefined, true),
+  c('hopper-fire-sale', 'Hopper Fire Sale', 'Market', 1, 'early', 'Last generation still trains this generation.', {}, { compute: 2 }, { money: 1 }, { capacity: 1 }, 0, 'market'),
   c('refurbished-mining-rigs', 'Gray-Market Mining Rigs', 'Market', 1, 'early', 'Hashrate becomes batch inference if you squint.', { compute: 1, energy: 1 }, { compute: 2 }, { compute: 1 }, { capacity: 1, grid: -1 }, 1, 'market', 'priority'),
   c('gray-market-broker', 'Dubai Gray-Market Broker', 'Market', 2, 'mid', 'It arrives with no warranty, three invoices, and perfect timing.', { money: 2, influence: 1 }, { compute: 2 }, undefined, { capacity: 1, policy: -1 }, 2, 'market', 'shock'),
   c('benchmark-leak', 'Vaguepost', 'Market', 1, 'early', 'One founder posts a GPU emoji and the market invents a roadmap.', { influence: 1 }, { money: 1 }, undefined, { moat: 2 }, 1, 'market', 'shock'),

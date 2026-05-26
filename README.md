@@ -64,7 +64,7 @@ Players start with no tableau and 0 resources. The first four market slots begin
 - `Stock Buyback`: Money lane. Turns into analyst hype, market pivots, panic buys, and IPO/war-chest plays.
 - `Lobby`: Influence lane. Turns into export licenses, tariff routing, sovereign AI deals, and government superclusters.
 
-The shop is capped at 12 cards: 4 starter supply piles plus 8 main shop cards. Each START pile has up to 4 copies, capped by current player count. Once a pile is exhausted, that slot becomes a normal shop slot. At the start of each phase, up to two empty main shop slots refill from the deck. Scout refreshes all non-starter shop slots from the deck and can claim Priority.
+The shop is capped at 16 cards: 4 starter supply piles plus 12 main shop cards. Each START pile has up to 4 copies, capped by current player count. Once a pile is exhausted, that slot becomes a normal shop slot. At the start of each phase, up to one empty non-starter shop slot per player refills from the deck. Scout refreshes all non-starter shop slots from the deck and can claim Priority.
 
 Events are separate from the 52-card deck. For now the prototype uses 12 short event cards and deals an 11-phase crisis queue after the opening draft by reshuffling that small event set as needed. Current examples include `H20 Suitcase Diplomat`, `Tariff Armageddon Spreadsheet`, `ASML Password Is litho123`, `CoWoS Bouncer Checks The List`, and `Triton Intern Deletes Matmul`.
 
@@ -88,7 +88,7 @@ When a card is built:
 - Add it to your tableau.
 - Resolve its immediate effect.
 - Leave that market slot empty.
-- At the start of the next phase, up to two empty main shop slots refill.
+- At the start of the next phase, up to one empty non-starter shop slot per player refills.
 
 After every player has acted, the next phase begins.
 

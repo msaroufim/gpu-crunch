@@ -55,6 +55,7 @@ type PlayableSample = {
   round: number
   strategy: Strategy
   count: number
+  nonStarterCount: number
 }
 
 type Game = {
@@ -76,7 +77,6 @@ type Game = {
 
 const cards = new Map(CARDS.map((card) => [card.id, card]))
 const events = new Map(EVENTS.map((event) => [event.id, event]))
-const PHASE_MAIN_REFILL_SIZE = 1
 const starterCardIds = new Set(OPENING_MARKET_CARD_IDS)
 
 function claimPriority(game: Game, players: Player[], player: Player) {
@@ -248,7 +248,8 @@ function refreshMainMarket(game: Game, players: Player[]) {
 
 function fillEmptyMainMarket(game: Game, players: Player[]) {
   let filled = 0
-  for (let index = 0; index < game.market.length && filled < PHASE_MAIN_REFILL_SIZE; index += 1) {
+  const refillLimit = Math.max(1, players.length)
+  for (let index = 0; index < game.market.length && filled < refillLimit; index += 1) {
     if (isProtectedStarterSlot(game, players, index)) continue
     if (game.market[index]) continue
     const nextCard = drawMarketCard(game)
@@ -602,8 +603,9 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
         .map((id) => id ? cards.get(id) : undefined)
         .filter((card): card is Card => Boolean(card))
         .filter((card) => canPay(player, card, game.event))
+      const nonStarterPlayable = playable.filter((card) => !card.starter).length
       game.playableCounts.push(playable.length)
-      game.playableSamples.push({ round: game.round, strategy: player.strategy, count: playable.length })
+      game.playableSamples.push({ round: game.round, strategy: player.strategy, count: playable.length, nonStarterCount: nonStarterPlayable })
       if (shouldScout(player, playable, game.round)) {
         scout(game, players, player)
       } else {
@@ -666,7 +668,7 @@ function optionLine(label: string, bucket: OptionBucket) {
   return `${label}: avg ${(bucket.optionSum / n).toFixed(2)}, 0 ${(100 * bucket.zero / n).toFixed(1)}%, 1 ${(100 * bucket.one / n).toFixed(1)}%, 0-1 ${(100 * (bucket.zero + bucket.one) / n).toFixed(1)}%, 2+ ${(100 * bucket.twoPlus / n).toFixed(1)}%, 3+ ${(100 * bucket.threePlus / n).toFixed(1)}% (${bucket.decisions} decisions)`
 }
 
-function summarizeOptions(games: number) {
+function summarizeOptions(games: number, scope: 'all' | 'nonstarter' = 'all') {
   const strategies: Strategy[] = [
     'balanced',
     'engine',
@@ -692,13 +694,14 @@ function summarizeOptions(games: number) {
     const lineup = [strategies[(seed - 1) % strategies.length], strategies[seed % strategies.length], strategies[(seed + 1) % strategies.length]]
     const { game } = play(seed, lineup)
     for (const sample of game.playableSamples) {
-      addOptionSample(overall, sample.count)
-      addOptionSample(byRound[sample.round], sample.count)
-      addOptionSample(byStrategy[sample.strategy], sample.count)
+      const count = scope === 'nonstarter' ? sample.nonStarterCount : sample.count
+      addOptionSample(overall, count)
+      addOptionSample(byRound[sample.round], count)
+      addOptionSample(byStrategy[sample.strategy], count)
     }
   }
 
-  console.log(`Simulated ${games} games for playable-option pressure.`)
+  console.log(`Simulated ${games} games for ${scope === 'nonstarter' ? 'non-starter ' : ''}playable-option pressure.`)
   console.log(optionLine('overall', overall))
 
   console.log('\nBy phase:')
@@ -1200,7 +1203,7 @@ if (mode === 'batch') summarizeBatch(Number(process.argv[3] ?? 100))
 else if (mode === 'duel') summarizeDuelBatch(Number(process.argv[3] ?? 50))
 else if (mode === 'cards') summarizeCardStats(Number(process.argv[3] ?? 1000))
 else if (mode === 'mirror') summarizeApexMirror(Number(process.argv[3] ?? 500))
-else if (mode === 'options') summarizeOptions(Number(process.argv[3] ?? 500))
+else if (mode === 'options') summarizeOptions(Number(process.argv[3] ?? 500), process.argv[4] === 'nonstarter' ? 'nonstarter' : 'all')
 else if (mode === 'events') summarizeEventImpact(Number(process.argv[3] ?? 500))
 else if (mode === 'tableaus') summarizeWinnerTableaus(Number(process.argv[3] ?? 100))
 else summarizeSingle(Number(mode))

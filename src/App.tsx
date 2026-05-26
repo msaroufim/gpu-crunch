@@ -574,7 +574,7 @@ function MarketRow({
         <div>
           <span>Common market</span>
           <h2>Available supply</h2>
-          <p className="section-note">START piles have limited copies. Exhausted START slots become normal shop slots.</p>
+          <p className="section-note">START piles have limited copies. Exhausted START slots become normal shop slots in the 16-card market.</p>
         </div>
       </div>
       <div className="market-cards">
@@ -834,7 +834,7 @@ function GameBoard({ socket, room }: { socket: Socket | null; room: Room }) {
             <p>You are rival GPU vendors racing through the same supply crunch. Seats are vendor-coded green, red, and blue.</p>
             <p>After phase 1, each shock is one phase. Each player gets one action: build one card or Scout.</p>
             <p>Scout spends your action. You cannot build a card after scouting that phase.</p>
-            <p>The shop is capped at 12 cards. Two empty main shop slots refill each phase. Scout skips your build, refreshes the 8 main shop slots, and can claim Priority.</p>
+            <p>The shop is capped at 16 cards. Up to one empty non-starter shop slot per player refills each phase. Scout skips your build, refreshes the non-starter shop slots, and can claim Priority.</p>
             <p>All builds come from the common market. No cards are hidden from the table.</p>
             <p>Final score is only printed VP on built cards. Unspent budget is discarded.</p>
           </section>

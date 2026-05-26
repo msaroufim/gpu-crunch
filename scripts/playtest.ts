@@ -42,6 +42,7 @@ type Player = {
   strategy: Strategy
   budget: ResourceMap
   tableau: string[]
+  buildHistory: Array<{ round: number; cardId: string }>
   passed: boolean
   initiative: boolean
   score: number
@@ -58,6 +59,13 @@ type PlayableSample = {
   nonStarterCount: number
 }
 
+type PhaseSample = {
+  round: number
+  scores: number[]
+  leaders: number[]
+  spread: number
+}
+
 type Game = {
   deck: string[]
   market: (string | null)[]
@@ -70,6 +78,7 @@ type Game = {
   priorityPlayer?: string
   playableCounts: number[]
   playableSamples: PlayableSample[]
+  phaseSamples: PhaseSample[]
   effectBuilds: number
   scouts: number
   chains: number
@@ -405,6 +414,7 @@ function build(game: Game, players: Player[], player: Player, cardId: string, wr
   for (const resource of RESOURCES) player.budget[resource] -= cardCost[resource]
   addBudget(player.incomeBuilt, productiveIncome(card))
   player.tableau.push(cardId)
+  player.buildHistory.push({ round: game.round, cardId })
   if (marketIndex >= 0) {
     if (wasProtectedStarterSlot) {
       if (!isProtectedStarterSlot(game, players, marketIndex)) game.market[marketIndex] = drawMarketCard(game)
@@ -462,6 +472,7 @@ function cloneGame(game: Game): Game {
     priorityPlayer: game.priorityPlayer,
     playableCounts: [],
     playableSamples: [],
+    phaseSamples: [],
     effectBuilds: game.effectBuilds,
     scouts: game.scouts,
     chains: game.chains,
@@ -473,6 +484,7 @@ function clonePlayers(players: Player[]): Player[] {
     ...player,
     budget: { ...player.budget },
     tableau: [...player.tableau],
+    buildHistory: player.buildHistory.map((build) => ({ ...build })),
     buildsByEra: { ...player.buildsByEra },
     incomeBuilt: { ...player.incomeBuilt },
   }))
@@ -481,6 +493,22 @@ function clonePlayers(players: Player[]): Player[] {
 function scorePlayers(players: Player[]) {
   for (const player of players) {
     player.score = player.tableau.reduce((sum, id) => sum + cards.get(id)!.vp, 0)
+  }
+}
+
+function scoreValue(player: Player) {
+  return player.tableau.reduce((sum, id) => sum + cards.get(id)!.vp, 0)
+}
+
+function phaseSample(round: number, players: Player[]): PhaseSample {
+  const scores = players.map(scoreValue)
+  const topScore = Math.max(...scores)
+  const lowScore = Math.min(...scores)
+  return {
+    round,
+    scores,
+    leaders: scores.map((score, index) => score === topScore ? index : -1).filter((index) => index >= 0),
+    spread: topScore - lowScore,
   }
 }
 
@@ -569,6 +597,7 @@ function makePlayer(name: string, strategy: Strategy): Player {
     effectBuilds: 0,
     buildsByEra: { early: 0, mid: 0, late: 0 },
     incomeBuilt: emptyIncome(),
+    buildHistory: [],
   }
 }
 
@@ -585,6 +614,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
     log: [],
     playableCounts: [],
     playableSamples: [],
+    phaseSamples: [],
     effectBuilds: 0,
     scouts: 0,
     chains: 0,
@@ -615,6 +645,7 @@ export function play(seed = 7, strategies: Strategy[] = ['balanced', 'engine', '
       }
       nextActive(game, players)
     }
+    game.phaseSamples.push(phaseSample(game.round, players))
   }
 
   scorePlayers(players)
@@ -947,6 +978,167 @@ function summarizeBatch(games: number) {
   }
 }
 
+function average(values: number[]) {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
+}
+
+function pearson(xValues: number[], yValues: number[]) {
+  if (xValues.length !== yValues.length || xValues.length < 2) return 0
+  const xAvg = average(xValues)
+  const yAvg = average(yValues)
+  let numerator = 0
+  let xDenominator = 0
+  let yDenominator = 0
+  for (let index = 0; index < xValues.length; index += 1) {
+    const xDelta = xValues[index] - xAvg
+    const yDelta = yValues[index] - yAvg
+    numerator += xDelta * yDelta
+    xDenominator += xDelta * xDelta
+    yDenominator += yDelta * yDelta
+  }
+  const denominator = Math.sqrt(xDenominator * yDenominator)
+  return denominator === 0 ? 0 : numerator / denominator
+}
+
+function uniqueLeader(sample: PhaseSample | undefined) {
+  return sample && sample.leaders.length === 1 ? sample.leaders[0] : undefined
+}
+
+function finalLeaders(players: Player[]) {
+  const scores = players.map(scoreValue)
+  const topScore = Math.max(...scores)
+  return scores.map((score, index) => score === topScore ? index : -1).filter((index) => index >= 0)
+}
+
+function finalMargin(players: Player[]) {
+  const scores = players.map(scoreValue).sort((a, b) => b - a)
+  return scores[0] - (scores[1] ?? 0)
+}
+
+function buildIncomeValue(build: { cardId: string }) {
+  return sumMap(productiveIncome(cards.get(build.cardId)!))
+}
+
+function buildVpValue(build: { cardId: string }) {
+  return cards.get(build.cardId)!.vp
+}
+
+function summarizeFun(games: number) {
+  const strategies: Strategy[] = [
+    'balanced',
+    'engine',
+    'vp',
+    'effects',
+    'scout',
+    'moneyCompute',
+    'influenceEnergy',
+    'computeEnergy',
+    'moneyInfluence',
+    'shark',
+    'apex',
+  ]
+  let totalLeadChanges = 0
+  let gamesWithLeadChange = 0
+  let phase4LeaderSamples = 0
+  let phase4LeaderOverturned = 0
+  let phase8LeaderSamples = 0
+  let phase8LeaderOverturned = 0
+  let closeFinishes = 0
+  let blowouts = 0
+  const margins: number[] = []
+  const playerRecords: Array<{
+    earlyEngine: number
+    earlyVp: number
+    finalScore: number
+    lateVp: number
+    totalVp: number
+    setupBuilds: number
+    finisherBuilds: number
+  }> = []
+
+  for (let seed = 1; seed <= games; seed += 1) {
+    const lineup = [strategies[(seed - 1) % strategies.length], strategies[seed % strategies.length], strategies[(seed + 1) % strategies.length]]
+    const { game, players } = play(seed, lineup)
+    const leaders = finalLeaders(players)
+    const margin = finalMargin(players)
+    margins.push(margin)
+    if (margin <= 2) closeFinishes += 1
+    if (margin >= 8) blowouts += 1
+
+    let previousLeader: number | undefined
+    let leadChanges = 0
+    for (const sample of game.phaseSamples) {
+      const leader = uniqueLeader(sample)
+      if (leader === undefined) continue
+      if (previousLeader !== undefined && leader !== previousLeader) leadChanges += 1
+      previousLeader = leader
+    }
+    totalLeadChanges += leadChanges
+    if (leadChanges > 0) gamesWithLeadChange += 1
+
+    const phase4Leader = uniqueLeader(game.phaseSamples.find((sample) => sample.round === 4))
+    if (phase4Leader !== undefined) {
+      phase4LeaderSamples += 1
+      if (!leaders.includes(phase4Leader)) phase4LeaderOverturned += 1
+    }
+
+    const phase8Leader = uniqueLeader(game.phaseSamples.find((sample) => sample.round === 8))
+    if (phase8Leader !== undefined) {
+      phase8LeaderSamples += 1
+      if (!leaders.includes(phase8Leader)) phase8LeaderOverturned += 1
+    }
+
+    for (const player of players) {
+      const earlyBuilds = player.buildHistory.filter((build) => build.round <= 4)
+      const lateBuilds = player.buildHistory.filter((build) => build.round >= 8)
+      const setupBuilds = earlyBuilds.filter((build) => {
+        const card = cards.get(build.cardId)!
+        return card.vp === 0 && buildIncomeValue(build) > 0
+      }).length
+      const finisherBuilds = player.buildHistory.filter((build) => {
+        const card = cards.get(build.cardId)!
+        return build.round >= 8 && (card.tier === 3 || card.vp >= 4)
+      }).length
+      playerRecords.push({
+        earlyEngine: earlyBuilds.reduce((sum, build) => sum + buildIncomeValue(build), 0),
+        earlyVp: earlyBuilds.reduce((sum, build) => sum + buildVpValue(build), 0),
+        finalScore: scoreValue(player),
+        lateVp: lateBuilds.reduce((sum, build) => sum + buildVpValue(build), 0),
+        totalVp: scoreValue(player),
+        setupBuilds,
+        finisherBuilds,
+      })
+    }
+  }
+
+  const denominator = games || 1
+  const sortedByEngine = [...playerRecords].sort((a, b) => a.earlyEngine - b.earlyEngine)
+  const quartileSize = Math.max(1, Math.floor(sortedByEngine.length * 0.25))
+  const bottomEngine = sortedByEngine.slice(0, quartileSize)
+  const topEngine = sortedByEngine.slice(-quartileSize)
+  const setupThenFinish = playerRecords.filter((record) => record.setupBuilds >= 2 && record.finisherBuilds >= 1)
+  const others = playerRecords.filter((record) => !(record.setupBuilds >= 2 && record.finisherBuilds >= 1))
+  const lateVpShares = playerRecords
+    .filter((record) => record.totalVp > 0)
+    .map((record) => record.lateVp / record.totalVp)
+
+  console.log(`Simulated ${games} games for fun proxies.`)
+  console.log(
+    `Swing: avg lead changes ${(
+      totalLeadChanges / denominator
+    ).toFixed(2)}, games with lead change ${(100 * gamesWithLeadChange / denominator).toFixed(1)}%, phase-4 leader overturned ${(100 * phase4LeaderOverturned / (phase4LeaderSamples || 1)).toFixed(1)}% (${phase4LeaderSamples} clear leads), phase-8 leader overturned ${(100 * phase8LeaderOverturned / (phase8LeaderSamples || 1)).toFixed(1)}% (${phase8LeaderSamples} clear leads), close finishes <=2 VP ${(100 * closeFinishes / denominator).toFixed(1)}%, blowouts >=8 VP ${(100 * blowouts / denominator).toFixed(1)}%, avg final margin ${average(margins).toFixed(2)} VP.`,
+  )
+  console.log(
+    `Planning: early engine-income correlation with final score ${pearson(
+      playerRecords.map((record) => record.earlyEngine),
+      playerRecords.map((record) => record.finalScore),
+    ).toFixed(2)}, early VP correlation ${pearson(
+      playerRecords.map((record) => record.earlyVp),
+      playerRecords.map((record) => record.finalScore),
+    ).toFixed(2)}, top-quartile early engine avg score ${average(topEngine.map((record) => record.finalScore)).toFixed(1)} vs bottom-quartile ${average(bottomEngine.map((record) => record.finalScore)).toFixed(1)}, setup-then-finisher avg score ${average(setupThenFinish.map((record) => record.finalScore)).toFixed(1)} (${setupThenFinish.length} players) vs others ${average(others.map((record) => record.finalScore)).toFixed(1)}, avg final VP built in phases 8-12 ${(100 * average(lateVpShares)).toFixed(1)}%.`,
+  )
+}
+
 function summarizeDuelBatch(gamesPerPair: number) {
   const strategies: Strategy[] = [
     'balanced',
@@ -1205,5 +1397,6 @@ else if (mode === 'cards') summarizeCardStats(Number(process.argv[3] ?? 1000))
 else if (mode === 'mirror') summarizeApexMirror(Number(process.argv[3] ?? 500))
 else if (mode === 'options') summarizeOptions(Number(process.argv[3] ?? 500), process.argv[4] === 'nonstarter' ? 'nonstarter' : 'all')
 else if (mode === 'events') summarizeEventImpact(Number(process.argv[3] ?? 500))
+else if (mode === 'fun') summarizeFun(Number(process.argv[3] ?? 500))
 else if (mode === 'tableaus') summarizeWinnerTableaus(Number(process.argv[3] ?? 100))
 else summarizeSingle(Number(mode))
